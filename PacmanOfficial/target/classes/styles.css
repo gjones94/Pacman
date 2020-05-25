@@ -1,0 +1,27 @@
+#HEADER_TEXT{
+    -fx-underline: true;
+    -fx-font-weight: bold;
+}
+
+#TEXT_FIELD{
+    -fx-background-color: black;
+    -fx-text-fill: blueviolet;
+    -fx-cursor: default;
+}
+
+#BTN_NORMAL {
+    -fx-background-color: black;
+    -fx-text-fill: blueviolet;
+    -fx-border-color: blueviolet;
+}
+
+#BTN_GRAYED {
+    -fx-background-color: darkslategray;
+    -fx-text-fill: darkgrey;
+}
+
+#BTN_HOVERED {
+    -fx-background-color: blueviolet;
+    -fx-text-fill: black;
+    -fx-border-color: yellow;
+}
