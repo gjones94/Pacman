@@ -69,7 +69,7 @@ public class Ghost {
     private Arc rightEyeLidLiner;
     private Color color;
     private Arc sadMouth;
-    private boolean colorVulnerable;
+    private boolean colorVulnerable = false;
     //======================================================================================================
 
     public Ghost(MapCell cell, Pacman pacman, double distance){
@@ -353,19 +353,21 @@ public class Ghost {
         vulnerable = true;
         if(!colorVulnerable){//prevents bad face adjustment when pacman eats a booster before this returns to normal.
             setFaceVulnerable();
+            setColorVulnerable();
+            colorVulnerable = true;
         }
-        setColorVulnerable();
+
     }
 
     public void setNotVulnerable(){
         vulnerable = false;
         setFaceNormal();
         setColorAlive();
+        colorVulnerable = false;
     }
 
     public void kill(){
         alive = false;
-        setFaceNormal();
         setColorDead();
         this.cellOccupied = Map.getGhostStartingPosition(); //set cell back at spawn
         for(Node node: BODY_PARTS){
@@ -379,8 +381,15 @@ public class Ghost {
 
     public void tryRespawn(){
         if(respawnTimer == 0){
-            setColorAlive();
+            if(vulnerable){
+                setFaceVulnerable();
+                setColorVulnerable();
+            }else{
+                setFaceNormal();
+                setColorAlive();
+            }
             alive = true;
+            respawnTimer = 420;
         }else{
             respawnTimer--;
         }
@@ -394,9 +403,11 @@ public class Ghost {
         if(colorVulnerable){ //switch back to normal
             setFaceNormal();
             setColorAlive();
+            colorVulnerable = false;
         }else{ //switch back to vulnerable
             setFaceVulnerable();
             setColorVulnerable();
+            colorVulnerable = true;
         }
     }
 
@@ -559,6 +570,32 @@ public class Ghost {
         return colors[random.nextInt(colors.length - 1)];
     }
 
+    private void setColorAlive(){
+        ghostHead.setFill(this.color);
+        body.setFill(this.color);
+        leftEyeLid.setFill(Color.WHITE);
+        rightEyeLid.setFill(Color.WHITE);
+        leftEye.setFill(Color.WHITE);
+        rightEye.setFill(Color.WHITE);
+        rightEyeLidLiner.setFill(Color.WHITE);
+        leftEyeLidLiner.setFill(Color.WHITE);
+        rightEyeLiner.setFill(Color.BLACK);
+        leftEyeLiner.setFill(Color.BLACK);
+        leftPupil.setFill(Color.BLUE);
+        rightPupil.setFill(Color.BLUE);
+        sadMouth.setFill(this.color);
+    }
+
+    private void setColorVulnerable(){
+        body.setFill(Color.BLUE);
+        ghostHead.setFill(Color.BLUE);
+        leftEyeLid.setFill(Color.BLUE);
+        rightEyeLid.setFill(Color.BLUE);
+        rightEyeLidLiner.setFill(Color.BLACK);
+        leftEyeLidLiner.setFill(Color.BLACK);
+        sadMouth.setFill(Color.BLACK);
+    }
+
     private void setColorDead(){
         for(Node node: BODY_PARTS){
             if(node instanceof Arc){
@@ -571,44 +608,18 @@ public class Ghost {
         }
     }
 
-    private void setColorAlive(){
-        ghostHead.setFill(this.color);
-        body.setFill(this.color);
-        leftEyeLid.setFill(Color.WHITE);
-        rightEyeLid.setFill(Color.WHITE);
-        rightEyeLidLiner.setFill(Color.WHITE);
-        leftEyeLidLiner.setFill(Color.WHITE);
-        rightEyeLiner.setFill(Color.BLACK);
-        leftEyeLiner.setFill(Color.BLACK);
-        sadMouth.setFill(this.color);
-    }
-
     private void setFaceNormal(){
         leftPupil.setCenterX(leftPupil.getCenterX() + (leftPupil.getRadius() * .7));
         rightPupil.setCenterX(rightPupil.getCenterX() - (rightPupil.getRadius() * .7));
         leftPupil.setCenterY(leftPupil.getCenterY() + leftPupil.getRadius() * .8);
         rightPupil.setCenterY(rightPupil.getCenterY() + rightPupil.getRadius() * .8);
-        colorVulnerable = false;
     }
 
     private void setFaceVulnerable(){
         leftPupil.setCenterX(leftPupil.getCenterX() - (leftPupil.getRadius() * .7));
         rightPupil.setCenterX(rightPupil.getCenterX() + (rightPupil.getRadius() * .7));
-
         rightPupil.setCenterY(rightPupil.getCenterY() - rightPupil.getRadius() * .8);
         leftPupil.setCenterY(leftPupil.getCenterY() - leftPupil.getRadius() * .8);
-        //make all these basically invisible
-        colorVulnerable = true;
-    }
-
-    private void setColorVulnerable(){
-        body.setFill(Color.BLUE);
-        ghostHead.setFill(Color.BLUE);
-        leftEyeLid.setFill(Color.BLUE);
-        rightEyeLid.setFill(Color.BLUE);
-        rightEyeLidLiner.setFill(Color.BLACK);
-        leftEyeLidLiner.setFill(Color.BLACK);
-        sadMouth.setFill(Color.BLACK);
     }
 
     public LinkedList<Node> getBody(){

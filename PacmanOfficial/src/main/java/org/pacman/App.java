@@ -86,10 +86,11 @@ public class App extends Application {
     private final static String gameMusic = "gameMusic";
     private final static String loseMusic = "lose";
     private final static String winMusic = "win";
+    private final static String intenseMusic = "intense";
 
     private Music music;
     private SoundEffects soundEffects;
-    private boolean intenseMusic = false;
+
 
     /*DO NOT EVER PUT ANYTHING IN STATIC ESPECIALLY IF IT CONTAINS JAVAFX OBJECTS THAT INITIALIZE
     I HAD THIS HERE AND IT CAUSED ISSUES STARTING (ONLY WITH THE COMPILED JAR) SINCE THE TOOLKIT WAS NOT YET INITIALIZED TO CREATE JAVAFX OBJECTS
@@ -306,18 +307,18 @@ public class App extends Application {
         checkForKeyEvent(elapsedTime - lastUpdateTime.get());
         if(player.isInvincible()) {
             ghostVulnerable = true;
+            vulnerableTimer = 480; //sets this again to make sure that initVulnerability kicks off every time that a booster is eaten.
             player.resetInvicibility(); //resets so that he can eat another booster.
         }
     }
 
     public void updateGhosts(){
-
         if(ghostVulnerable){
             if(vulnerableTimer != 0){
                 if(vulnerableTimer == 480) {
                     initVulnerability();
-                }else if(vulnerableTimer <61 && vulnerableTimer % 10 == 0){
-                    timerWarning = true;
+                }else{
+                    timerWarning = vulnerableTimer < 61 & vulnerableTimer % 10 == 0; //set timer warning if true, otherwise it will be false.
                 }
                 vulnerableTimer--;
            }else{
@@ -349,15 +350,17 @@ public class App extends Application {
     }
 
     private void initVulnerability(){
-        changeMusic("intense");
+        changeMusic(intenseMusic);
         for(Ghost ghost: ghosts){
             ghost.setVulnerable();
         }
     }
 
     private void endVulnerability(){
+        ghostVulnerable = false;
         vulnerableTimer = 480;
         timerWarning = false;
+        changeMusic(gameMusic);
         for(Ghost ghost: ghosts){
             ghost.setNotVulnerable();
         }
