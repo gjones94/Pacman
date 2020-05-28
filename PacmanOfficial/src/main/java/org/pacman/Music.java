@@ -3,43 +3,72 @@ package org.pacman;
 import javax.sound.sampled.*;
 import java.io.IOException;
 import java.net.URL;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 
 public class Music{
-
-    private Thread musicThread;
-
-    private final String musicName;
-
+    private boolean dead = false;
+    private boolean play = false;
+    private HashMap<String, Clip> clips = new HashMap<>();
     private Clip clip;
+    private String[] songs = {"gameMusic","intense","intro", "lose", "win"};
 
-    private final Runnable runnable = new Runnable() {
-            @Override
-            public void run() {
-                URL file = getClass().getResource("/" + musicName);
-                try (AudioInputStream as = AudioSystem.getAudioInputStream(file)) {
-
-                    clip = AudioSystem.getClip();
-                    clip.open(as);
-                    clip.loop(Clip.LOOP_CONTINUOUSLY);
-
-                } catch (UnsupportedAudioFileException | IOException | LineUnavailableException e) {
-                    clip.start();
-                }
+    public Music(){
+        try {
+            clip = AudioSystem.getClip();
+        }catch(LineUnavailableException e){
+            e.printStackTrace();
+        }
+        for(String str: songs){
+            URL file = getClass().getResource("/" + str + ".wav");
+            try (AudioInputStream as = AudioSystem.getAudioInputStream(file)) {
+                Clip tempClip = AudioSystem.getClip();
+                tempClip.open(as);
+                clips.put(str, tempClip);
+//                tempClip.close();
+            } catch (UnsupportedAudioFileException |LineUnavailableException | IOException exception) {
+                exception.printStackTrace();
             }
-    };
-
-
-    public Music(String name){
-        this.musicName = name;
+        }
     }
 
-    public void play(){
-       musicThread = new Thread(runnable);
-       musicThread.start();
+    public synchronized void selectSong(String name){
+        clip = clips.get(name);
+        clip.setFramePosition(0);
     }
 
-    public void stop(){
+    public synchronized void getThreadReady(){//sets the thread into the while loop, once the boolean is true, and the thread is notified, it will begin playing.
+        while(!play){
+            try{
+                wait();
+            }catch (InterruptedException e){
+
+            }
+        }
+        play = false;
+        clip.loop(Clip.LOOP_CONTINUOUSLY);
+        notify();
+    }
+
+    public synchronized void play(){
+        play = true;
+        notifyAll();
+    }
+
+    public void kill(){
+        dead = true;
+    }
+
+    public boolean killed(){
+        return dead;
+    }
+
+    public boolean isPlaying(){
+        return clip.isActive();
+    }
+
+    public synchronized void stop(){
         clip.stop();
-        musicThread.interrupt();
     }
 }

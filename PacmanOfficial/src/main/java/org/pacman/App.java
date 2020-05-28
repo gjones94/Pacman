@@ -24,6 +24,7 @@ import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
+import javafx.stage.WindowEvent;
 
 import java.io.*;
 import java.nio.file.Files;
@@ -47,41 +48,48 @@ public class App extends Application {
     private static EndMenu endMenu;
     private static Map gameMap;
 
-    private final static String mapName = "original";
+    private final String mapName = "original";
     private final String backgroundColor = "-fx-background-color: black";
-
-    private final static String fontPath = "DeathStar.otf";
-    private final static String fontName = "Death Star"; //must match name of it exactly within the file
+    private final String fontPath = "RainyDays.ttf";
+    private final String fontName = "Rainy Days"; //must match name of it exactly within the file
 
 //    private final static String fontPath = "RainyDays.ttf";
 //    private final static String fontName = "Rainy Days"; //must match name of it exactly within the file
 
-    private static Rectangle2D screenDimensions;
-    private static double pixelSize;
+    private Rectangle2D screenDimensions;
+    private double pixelSize;
 
     //--loop, last update time, and keystrokes.
-    private static AnimationTimer gameLoop;
-    private static LinkedList<KeyCode> keyStack;
-    private static LongProperty lastUpdateTime;
+    private AnimationTimer gameLoop;
+    private LinkedList<KeyCode> keyStack;
+    private LongProperty lastUpdateTime;
 
 
     //--game objects
-    private static Pacman player;
-    private static double playerSpeed;
-    private static double ghostSpeed;
-    private static int numberOfGhosts = 15; //FIXME should also be dependent on the map level.
+    private Pacman player;
+    private final int numberOfGhosts = 4; //FIXME should also be dependent on the map level.
     private List<Ghost> ghosts;
-    private static int mapLevel = 1; //beginning level.
-    private static boolean gameOver = false;
-    private static boolean win = false;
-    private static boolean collidedWithPlayer = false;
+    private int mapLevel = 1; //beginning level.
+    private boolean gameOver = false;
+    private boolean win = false;
+    private boolean collidedWithPlayer = false;
+    private boolean vulnerableMode = false;
+    private boolean ghostResetToNormal = false;
+    private int vulnerableTimer;
+
+
+    private static boolean paused = false;
     private static final Path path = Path.of("./scores.txt");
 
     //--audio/video
-    private static Music music;
-    private final static String mainMenuMusic = "starwars.wav";
-    private final static String gameMusic = "coward.wav";
-    private final static String endMusic = "pacman.wav";
+    private final static String mainMenuMusic = "intro";
+    private final static String gameMusic = "gameMusic";
+    private final static String loseMusic = "lose";
+    private final static String winMusic = "win";
+
+    private Music music;
+    private SoundEffects soundEffects;
+    private boolean intenseMusic = false;
 
     /*DO NOT EVER PUT ANYTHING IN STATIC ESPECIALLY IF IT CONTAINS JAVAFX OBJECTS THAT INITIALIZE
     I HAD THIS HERE AND IT CAUSED ISSUES STARTING (ONLY WITH THE COMPILED JAR) SINCE THE TOOLKIT WAS NOT YET INITIALIZED TO CREATE JAVAFX OBJECTS
@@ -94,25 +102,45 @@ public class App extends Application {
         showMainMenu(true); //this should have the start game method within it.
     }
 
-    //=======================================INITIALIZERS=========================================================
+    //=======================================INITIAL SETTINGS======================================================
     private void initSettings(){
         initFonts();
-        initiatePixelSize();
+        initPixelSize();
+        initAudio();
     }
 
     private void initFonts(){
         Font.loadFont(getClass().getResource("/" + fontPath).toExternalForm(), 1);
     }
 
-    private void initiatePixelSize(){//FIXME need to adjust speed too!!!
+    private void initPixelSize(){//FIXME need to adjust speed too!!!
         screenDimensions = Screen.getPrimary().getVisualBounds();
         if(screenDimensions.getHeight() < 1080){
-            pixelSize = 18;
+//            pixelSize = 18;
+            pixelSize = 24;
         }else{
-            pixelSize = 30;
+//            pixelSize = 30;
+            pixelSize = 40;
         }
+
+
+
     }
 
+    private void initAudio(){
+        soundEffects = new SoundEffects();
+        Thread soundThread = new Thread(new runSound(soundEffects));
+        soundThread.start();
+
+        music = new Music();
+        music.selectSong(mainMenuMusic);
+        Thread musicThread = new Thread(new runMusic(music));
+        musicThread.start(); //thread enters music class loop to play music when notified.
+    }
+    //============================================================================================================
+
+
+    //===================================GAME INITIALIZERS=========================================================
     private void changeScene(Scene scene, Pane pane){
         Rectangle2D primScreenBounds = Screen.getPrimary().getVisualBounds();
         mainStage.setScene(scene); //puts the main scene onto the stage
@@ -124,29 +152,43 @@ public class App extends Application {
     private void initKeyCommands(Scene scene){
         keyStack = new LinkedList<>();
         scene.setOnKeyPressed(event -> {
-            if(!keyStack.contains(event.getCode())){
-                if(keyStack.size() == 2){
-                    keyStack.set(0, event.getCode());
+            if(event.getCode().equals(KeyCode.SPACE)){ //PAUSE GAME KEY
+                if(paused){
+                    paused = false;
+                    music.play();
+                    resumeGame();
                 }else{
-                    keyStack.push(event.getCode());
+                    paused = true;
+                    music.stop();
+                    pauseGame();
+                }
+            }else {//MAIN KEY STROKES
+                if (!keyStack.contains(event.getCode())) {
+                    if (keyStack.size() == 2) {
+                        keyStack.set(0, event.getCode());
+                    } else {
+                        keyStack.push(event.getCode());
+                    }
                 }
             }
         });
     }
 
     private void initPacMan(){//FIXME feed pixel size to me
-        playerSpeed = (pixelSize == 18) ? 3 : 5;
+//        double playerSpeed = (pixelSize == 18) ? 3 : 5;
+        double playerSpeed = (pixelSize == 18) ? 2.4 : 4;
         player = new Pacman(gameMap.getPacManStartingPosition(), playerSpeed); //sets the pacman in top left corner
         gameMap.initPlayer(player);
     }
 
-    private void initGhosts(){//FIXME feed pixel size to me
+    private void initGhosts(){
         ghosts = new LinkedList<>();
-        ghostSpeed = (pixelSize == 18) ? 1 : 2.0; //for mom, need to set to .5 or 1
+//        double ghostSpeed = (pixelSize == 18) ? 1 : 2.0; //for mom, need to set to .5 or 1
+        double ghostSpeed = (pixelSize == 18) ? 1.5 : 2.5; //for mom, need to set to .5 or 1
         for(int i = 0; i < numberOfGhosts; i++){
             Ghost ghost = new Ghost(gameMap.getGhostStartingPosition(), player, ghostSpeed);
             ghosts.add(ghost);
-            gameMap.initGhost(ghost.getBody());
+            gameMap.initGhost(ghost);
         }
     }
     //============================================================================================================
@@ -158,21 +200,21 @@ public class App extends Application {
         mainStage.setScene(mainMenu.getScene());
         changeScene(mainMenu.getScene(), mainMenu.getPane());
         mainStage.show();
+        mainStage.setOnCloseRequest(closeWindow);
         if(startMusic){
-            startMusic(mainMenuMusic);
+            changeMusic(mainMenuMusic);
         }
     }
 
     private void showEndMenu(){
         gameLoop.stop();
         endMenu = new EndMenu(gameMap.getTime(), win);
-
         music.stop();
-        SoundEffects soundEffects = new SoundEffects();
         if(win){
-            soundEffects.play("win.wav");
+            changeMusic(winMusic);
         }else{
-            soundEffects.play("lose.wav");
+            soundEffects.selectSound(loseMusic);
+            soundEffects.play();
         }
         changeScene(endMenu.getScene(), endMenu.getPane());
     }
@@ -192,15 +234,21 @@ public class App extends Application {
     }
 
     private void startGame(){
-
         gameMap = new Map(mapName, pixelSize); //initialize map FIXME - THIS WILL BE DEPENDENT ON THE MAP LEVEL, SO WE SHOULD NOT PASS A PARAMETER HERE.
-        stopMusic();
-        startMusic(gameMusic);
         changeScene(gameMap.getScene(), gameMap.getPane()); //configure stage settings for screen position
         initKeyCommands(gameMap.getScene()); //bind keystroke actions to the main scene window
         initPacMan(); //create the pac-man player.
         initGhosts();
+        changeMusic(gameMusic);
         bootGame(); //starts the game loop.
+    }
+
+    private void changeMusic(String name){
+        if(music.isPlaying()){
+            music.stop();
+        }
+        music.selectSong(name);
+        music.play();
     }
 
     private void bootGame(){
@@ -214,53 +262,130 @@ public class App extends Application {
         gameLoop.start();
     }
 
-    private void startMusic(String newMusic){
-        music = new Music(newMusic);
-        music.play();
+    private void pauseGame(){
+        gameLoop.stop();
     }
 
-    private void stopMusic(){
+    private void resumeGame(){
+        gameLoop.start();
+    }
+
+    private void killAudio(){
+        /*this will allow the threads to to attempt to loop again,
+        but since the music and sound classes are in a kill state,
+        they won't re-enter the continuous loop they are in.
+        */
+        soundEffects.kill();
+        soundEffects.play();
+        soundEffects.stop();
+        music.kill();
+        music.play();
         music.stop();
     }
 
     private void exit(){
-        stopMusic();
+        killAudio();
         Platform.exit();
     }
-
     //============================================================================================================
-
 
     //=======================================GAME UPDATE==========================================================
     public void onUpdate(long timeStamp){
         if(!gameOver){
-            moveGameObjects(timeStamp);
+            updatePlayer(timeStamp);
+
+            if(!vulnerableMode){
+                normalGhostUpdate();
+            }else{
+                vulnerableGhostUpdate();
+            }
+
+            updateGameStats();
             lastUpdateTime.set(timeStamp);
-            gameMap.updateScore(player.getScore());
-            gameMap.updateTime();
         }else{
             showEndMenu();
         }
         checkIfGameOver();
     }
 
-    public void moveGameObjects(double elapsedTime){
-        movePlayer(elapsedTime);
-        moveGhosts();
-    }
-
-    public void movePlayer(double elapsedTime){
+    public void updatePlayer(double elapsedTime){
         checkForKeyEvent(elapsedTime - lastUpdateTime.get());
+        if(player.isInBeastMode()) {
+            vulnerableMode = true;
+            vulnerableTimer = 480;
+//            soundEffects.selectSound("untouchable"); //make this random
+//            soundEffects.play();
+            player.resetBoostMode(); //resets so that he can eat another booster.
+        }
     }
 
-    public void moveGhosts(){
+    public void normalGhostUpdate(){
         for(Ghost ghost: ghosts){
             ghost.moveRandomly();
-            if(ghost.collidedWithPlayer()){
-                collidedWithPlayer = true;
-                break;
+            if(collisionCheck(ghost)){
+                break; //exits this, and will end the game.
             }
         }
+    }
+
+    private void vulnerableGhostUpdate(){
+        vulnerableMusic();
+        
+    }
+
+    private void vulnerableMusic(){
+        if(vulnerableMode && !intenseMusic){
+            intenseMusic = true;
+            changeMusic("intense");
+        }else if(!vulnerableMode && intenseMusic){
+            intenseMusic = false;
+            changeMusic(gameMusic);
+        }
+    }
+
+    private void vulnerableCountDown(){
+
+    }
+
+    private void makeVulnerable(Ghost ghost){
+
+    }
+
+
+
+    private boolean ifAlive(Ghost ghost){
+        if(!ghost.needsToRespawn()){
+            return true;
+        }else{
+
+            return false;
+        }
+    }
+
+    private boolean collisionCheck(Ghost ghost){
+        if(ghost.collidedWithPlayer() && ifAlive(ghost)){
+            if(ghost.isVulnerable()){
+                gameMap.kill(ghost);
+                soundEffects.selectSound("scream");
+                soundEffects.play();
+                ghost.respawn(gameMap.getGhostStartingPosition());
+            }else{
+                collidedWithPlayer = true;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void respawnAttempt(Ghost ghost){
+        if(!gameMap.respawnAttempt(ghost)){
+            ghost.countDownRespawn();
+        };
+    }
+
+    private void updateGameStats(){
+        gameMap.updateScore(player.getScore());
+        gameMap.updateTime();
     }
 
     public void checkIfGameOver(){
@@ -274,10 +399,11 @@ public class App extends Application {
     }
 
     public void resetGame(){
-        MapCell.resetFood();
+        MapCell.resetFood(); //puts food back to original count.
         gameOver = false;
         collidedWithPlayer = false;
         win = false;
+        paused = false;
     }
     //============================================================================================================
 
@@ -288,6 +414,8 @@ public class App extends Application {
     //============================================================================================================
 
     //======================================CLICK AND KEY EVENTS==================================================
+    EventHandler<WindowEvent> closeWindow = windowEvent -> exit(); //kicks off exit method to kill audio threads.
+
     EventHandler<MouseEvent> mouseClicked = event -> {
         MenuButton button = (MenuButton) event.getSource();
         executeButton(button.getIdentifier());
@@ -321,15 +449,13 @@ public class App extends Application {
             case "OPTIONS":
                 break;
             case "SAVE SCORE":
-                if(!win){
-                    SoundEffects soundEffects = new SoundEffects();
-                    soundEffects.play("repeatLose.wav");
-                }else{
+                if(win){
                     saveUserScore();
                 }
                 break;
             case "SAVE":
                 scoreSaver.addScoreToList();
+                changeMusic(mainMenuMusic);
                 showLeaderBoard();
                 break;
             case "EXIT":
@@ -359,19 +485,15 @@ public class App extends Application {
         switch (key) {
             case UP:
             case W:
-            case I:
                 return player.moveUp();
             case DOWN:
             case S:
-            case K:
                 return player.moveDown();
             case RIGHT:
             case D:
-            case L:
                 return player.moveRight();
             case LEFT:
             case A:
-            case J:
                 return player.moveLeft();
             default:
                 return false;
@@ -462,7 +584,6 @@ public class App extends Application {
 
         private void initButtons() {
             font = new Font(fontName, vbox.getPrefWidth() / 14);
-//            font = myFont;
             double width = vbox.getPrefWidth();
             double height = vbox.getPrefHeight() / 10;
 
@@ -487,7 +608,7 @@ public class App extends Application {
         }
 
         private void initDrawLogo() {
-            mainMenu = new Text("P A C W A R S");
+            mainMenu = new Text("P A C M A N");
             mainMenu.setFont(new Font(fontName, topHBox.getPrefHeight() / 1.5));
             mainMenu.setFill(Color.YELLOW);
             topHBox.getChildren().add(mainMenu);
@@ -1018,7 +1139,7 @@ public class App extends Application {
 
             //CREATE MAIN HEADER LOGO FOR LEADERBOARD
             Text leaderBoardLogo = new Text("L E A D E R   B O A R D");
-            leaderBoardLogo.setFont(new Font(fontName, upperHBox.getPrefHeight() / 2));
+            leaderBoardLogo.setFont(new Font(fontName, upperHBox.getPrefHeight() / 3));
             leaderBoardLogo.setFill(Color.YELLOW);
 
             //CREATE HEADERS
@@ -1038,6 +1159,12 @@ public class App extends Application {
             nameColumn.getChildren().add(nameHeader);
             scoreColumn.getChildren().add(scoreHeader);
             timeColumn.getChildren().add(timeHeader);
+
+            //spacing
+            rankingColumn.getChildren().add(new Text(""));
+            nameColumn.getChildren().add(new Text(""));
+            scoreColumn.getChildren().add(new Text(""));
+            timeColumn.getChildren().add(new Text(""));
 
             rankingColumn.setAlignment(Pos.TOP_CENTER);
             nameColumn.setAlignment(Pos.TOP_CENTER);

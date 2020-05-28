@@ -30,6 +30,9 @@ public class Map {
     private final String BACKGROUND_COLOR = "-fx-background-color: black";
     private final Color MAP_COLOR = Color.BLUEVIOLET;
 
+    private static MapCell ghostStartPosition;
+    private static MapCell pacmanStartPosition;
+
     //variables for window settings
     private final double[] FRAME_DIMENSIONS = new double[2];
     private final double[] MAP_DIMENSIONS = new double[2];
@@ -60,15 +63,15 @@ public class Map {
     }
     //================================================================================================
 
-    //===================================INITIALIZING METHODS=========================================
 
+    //===================================INITIALIZING METHODS=========================================
     private void initGameLevel(){
         currentMap = new LinkedList<>();
         nonBorderCells = new LinkedList<>();
     }
 
     private void initReadMap(String map) {//map here will be used eventually once levels are implemented.
-        InputStream inputStream = getClass().getResourceAsStream("/original.txt");
+        InputStream inputStream = getClass().getResourceAsStream("/orig.txt");
         InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
 
         try(BufferedReader reader = new BufferedReader(inputStreamReader)){
@@ -80,12 +83,26 @@ public class Map {
                 mapElements = input.toCharArray();
                 for (char c : mapElements) {
                     MapCell cell;
-                    if (c == '#') {
-                        cell = new MapCell(columnCount * cellSize, rowCount * cellSize, cellSize, true, false, MAP_COLOR); //FIXME for better borders, this will need to happen after links are established.
-                    } else if (c == 'P') {
-                        cell = new MapCell(columnCount * cellSize, rowCount * cellSize, cellSize, false, true, null); //FIXME for better borders, this will need to happen after links are established.
-                    } else {
-                        cell = new MapCell(columnCount * cellSize, rowCount * cellSize, cellSize, false, false, null); //FIXME for better borders, this will need to happen after links are established.
+                    switch(c){
+                        case '#':
+                            cell = new MapCell(columnCount * cellSize, rowCount * cellSize, cellSize, true, false, MAP_COLOR);
+                            break;
+                        case 'P':
+                            cell = new MapCell(columnCount * cellSize, rowCount * cellSize, cellSize, false, true, null);
+                            break;
+                        default:
+                            cell = new MapCell(columnCount * cellSize, rowCount * cellSize, cellSize, false, false, null);
+                            if(c == 'G'){
+                                cell.setGhostStart();
+                                ghostStartPosition = cell;
+                            }
+                            if(c == 'U'){
+                                cell.setPacmanStart();
+                                pacmanStartPosition = cell;
+                            }
+                            if(c == 'B'){
+                                cell.setBoosterCell();
+                            }
                     }
                     currentMap.add(cell); //FIXME, once here, we will then loop through all cells and draw the map in another function.
                     if (!cell.isBorder() && !cell.isPortal()) {
@@ -139,8 +156,22 @@ public class Map {
         mapPane.getChildren().add(pacman);
     }
 
-    public void initGhost(LinkedList<Node> enemy){
-        mapPane.getChildren().addAll(enemy);
+    public void initGhost(Ghost ghost){
+        mapPane.getChildren().addAll(ghost.getBody());
+
+    }
+
+    public void kill(Ghost ghost){
+        mapPane.getChildren().removeAll(ghost.getBody());
+    }
+
+    public boolean respawnAttempt(Ghost ghost){
+        if(ghost.getRespawnTime() == 0){
+            ghost.resetSpawn();
+            mapPane.getChildren().addAll(ghost.getBody());
+            return true;
+        }
+        return false;
     }
 
     private void initStatistics() {
@@ -164,12 +195,11 @@ public class Map {
     }
 
     public MapCell getPacManStartingPosition() {//FIXME, needs to be based on the map indicator.
-        return nonBorderCells.get((nonBorderCells.size() * 5 / 6) - 3);
+        return pacmanStartPosition;
     }
 
     public MapCell getGhostStartingPosition(){//FIXME, needs to be based on the map indicator.
-        int middleIndex = nonBorderCells.size() / 2 - 3;
-        return nonBorderCells.get(middleIndex);
+        return ghostStartPosition;
     }
 
     public int getMapFoodLeft(){
@@ -208,9 +238,9 @@ public class Map {
             this.SCORE_LABEL = new Label();
             this.TIME_LABEL = new Label();
             this.FONT_SIZE = FRAME_DIMENSIONS[0] / 30;
-            font = new Font("Death Star", FONT_SIZE);
-            setScorePosition(FRAME_DIMENSIONS[0] / 8, (cellSize / 5));
-            setTimePosition(FRAME_DIMENSIONS[0] * 6 / 11, (cellSize / 5));
+            font = new Font("Rainy Days", FONT_SIZE);
+            setScorePosition(FRAME_DIMENSIONS[0] / 8, 0);
+            setTimePosition(FRAME_DIMENSIONS[0] * 6 / 11, 0);
         }
 
         public void setScorePosition(double x, double y){

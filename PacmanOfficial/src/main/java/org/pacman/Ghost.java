@@ -7,18 +7,27 @@ import javafx.scene.shape.ArcType;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Polygon;
 
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Random;
 
 public class Ghost {
-    //Constants for direction
+
+    //===========================================STATE=======================================================
+    private boolean vulnerable = false;
+    private boolean respawn = false;
+    private int respawnTimer = 420;
+    //=======================================================================================================
+
+
+    //====================================DIRECTIONAL CONSTANTS==============================================
     private final static String LEFT = "LEFT";
     private final static String RIGHT = "RIGHT";
     private final static String UP = "UP";
     private final static String DOWN = "DOWN";
     //=============================================BODY=====================================================
 
-    //USED FOR NAVIGATION
+    //=====================================NAVIGATIONAL VARIABLES===========================================
     private MapCell cellOccupied;
     private final Pacman pacman; //used for checking whereabouts of player.
     private double xLeft;
@@ -35,20 +44,33 @@ public class Ghost {
     private String nextDirection;
     private boolean currentCanMove;
     private boolean nextCanMove;
+    //======================================================================================================
 
     //intelligent movement variables
     private String shorterMovement = "";
     private String longerMovement = "";
 
+
     private final LinkedList<Node> BODY_PARTS = new LinkedList<>();
+
 
     //USED FOR DRAWING
     private final Color[] colors = {Color.BLUE, Color.RED, Color.ORANGE, Color.FUCHSIA, Color.GREEN, Color.VIOLET};
     private Arc ghostHead;
     private Polygon body;
     private Circle leftEye;
+    private Circle leftEyeLiner;
+    private Circle rightEyeLiner;
     private Circle rightEye;
+    private Circle leftPupil;
+    private Circle rightPupil;
+    private Arc leftEyeLid;
+    private Arc rightEyeLid;
+    private Arc leftEyeLidLiner;
+    private Arc rightEyeLidLiner;
     private Color color;
+    private Arc sadMouth;
+    private boolean colorFearful;
     //======================================================================================================
 
     public Ghost(MapCell cell, Pacman pacman, double distance){
@@ -56,7 +78,7 @@ public class Ghost {
         this.cellOccupied = cell;
         this.distance = distance;
 
-        drawGhost();
+        initGhost();
         updateBounds();
         initRandomDirectionList();
         chooseCurrentDirection();
@@ -165,9 +187,9 @@ public class Ghost {
     private void moveHorizontally(){
 
     }
-
     //===================================================|
 
+    //======================================NAVIGATIONAL METHODS============================================
     private boolean executeDirection(String direction){
         switch(direction){
             case LEFT:
@@ -182,8 +204,6 @@ public class Ghost {
                 return false;
         }
     }
-
-    //======================================NAVIGATIONAL METHODS============================================
 
     private void moveUnit(String direction){
         double horizontalMovement = 0;
@@ -323,16 +343,70 @@ public class Ghost {
         yMid = (yUp + yDown) / 2;
     }
 
-    //======================================================================================================
+    //==========================================================================================================
 
+    //=========================================VULNERABILITY MODE METHODS=======================================
+    public boolean isVulnerable(){
+        return vulnerable;
+    }
+
+    public void makeVulnerable(){
+        vulnerable = true;
+        if(!colorFearful){//prevents duplicate coloring when pacman eats a booster before this returns to normal.
+            colorFearful();
+        }
+    }
+
+    public void setToNormalMode(){
+        vulnerable = false;
+        returnToNormalColor();
+    }
+
+    public void respawn(MapCell cell){
+        this.cellOccupied = cell;
+        respawn = true;
+        for(Node node: BODY_PARTS){
+            node.setLayoutX(0);
+            node.setLayoutY(0);
+            node.setTranslateY(0);
+            node.setTranslateY(0);
+        }
+        updateBounds();
+    }
+
+    public boolean needsToRespawn(){
+        return respawn;
+    }
+
+    public void countDownRespawn(){
+        respawnTimer--;
+    }
+
+    public int getRespawnTime(){
+        return respawnTimer;
+    }
+
+    public void resetSpawn(){
+        respawn = false;
+        respawnTimer = 420;
+    }
+
+    public void ghostWarning(){
+        if(colorFearful){
+            returnToNormalColor();
+        }else{
+            colorFearful();
+        }
+    }
 
     //======================================CONSTRUCT THE ENEMY BODY============================================
-    private void drawGhost(){
+    private void initGhost() {
         initColor();
         initBody();
         initHead();
         initEyes();
         initPupils();
+        initSadMouth();
     }
 
     private void initColor() {
@@ -391,38 +465,136 @@ public class Ghost {
     private void initEyes(){
         double xLeftCoordinate = ghostHead.getCenterX() - ((ghostHead.getRadiusX() * 4 / 9));
         double xRightCoordinate = ghostHead.getCenterX() + ((ghostHead.getRadiusX() * 4 / 9));
-        double yCoordinate = ghostHead.getCenterY() - ghostHead.getRadiusY() / 4;
-        Circle leftEyeLiner = new Circle(xLeftCoordinate, yCoordinate, cellOccupied.getSize() / 5 + 1);
+        double yCoordinate = ghostHead.getCenterY() - ghostHead.getRadiusY() / 2.5;
+
+        leftEyeLiner = new Circle(xLeftCoordinate, yCoordinate, cellOccupied.getSize() / 5 + 1);
         leftEyeLiner.setFill(Color.BLACK);
 
         leftEye = new Circle(xLeftCoordinate, yCoordinate, cellOccupied.getSize() / 5);
         leftEye.setFill(Color.WHITE);
 
-        Circle rightEyeLiner = new Circle(xRightCoordinate, yCoordinate, cellOccupied.getSize() / 5 + 1);
+        rightEyeLiner = new Circle(xRightCoordinate, yCoordinate, cellOccupied.getSize() / 5 + 1);
         rightEyeLiner.setFill(Color.BLACK);
 
         rightEye = new Circle(xRightCoordinate, yCoordinate, cellOccupied.getSize() / 5);
         rightEye.setFill(Color.WHITE);
+
+        leftEyeLidLiner = new Arc();
+        leftEyeLidLiner.setCenterX(xLeftCoordinate);
+        leftEyeLidLiner.setCenterY(yCoordinate + (.15 * leftEye.getRadius()));
+        leftEyeLidLiner.setRadiusX(leftEye.getRadius() - leftEye.getRadius()*.05);
+        leftEyeLidLiner.setRadiusY(leftEye.getRadius() - (.2 * leftEye.getRadius()));
+        leftEyeLidLiner.setType(ArcType.ROUND);
+        leftEyeLidLiner.setFill(Color.WHITE);
+        leftEyeLidLiner.setStartAngle(30);
+        leftEyeLidLiner.setLength(-180);
+
+        rightEyeLidLiner = new Arc();
+        rightEyeLidLiner.setCenterX(xRightCoordinate);
+        rightEyeLidLiner.setCenterY(yCoordinate + (.15 * rightEye.getRadius()));
+        rightEyeLidLiner.setRadiusX(rightEye.getRadius() - rightEye.getRadius()*.05);
+        rightEyeLidLiner.setRadiusY(rightEye.getRadius() - (.2 * rightEye.getRadius()));
+        rightEyeLidLiner.setType(ArcType.ROUND);
+        rightEyeLidLiner.setFill(Color.WHITE);
+        rightEyeLidLiner.setStartAngle(150);
+        rightEyeLidLiner.setLength(180);
+
+        leftEyeLid = new Arc();
+        leftEyeLid.setCenterX(xLeftCoordinate);
+        leftEyeLid.setCenterY(yCoordinate + (.3 * leftEye.getRadius()));
+        leftEyeLid.setRadiusX(leftEye.getRadius() - leftEye.getRadius()*.05);
+        leftEyeLid.setRadiusY(leftEye.getRadius() - (.20 * leftEye.getRadius()));
+        leftEyeLid.setType(ArcType.ROUND);
+        leftEyeLid.setFill(Color.WHITE);
+        leftEyeLid.setStartAngle(30);
+        leftEyeLid.setLength(-180);
+
+        rightEyeLid = new Arc();
+        rightEyeLid.setCenterX(xRightCoordinate);
+        rightEyeLid.setCenterY(yCoordinate + (.3 * rightEye.getRadius()));
+        rightEyeLid.setRadiusX(rightEye.getRadius() - rightEye.getRadius()*.05);
+        rightEyeLid.setRadiusY(rightEye.getRadius() - (.20 * rightEye.getRadius()));
+        rightEyeLid.setType(ArcType.ROUND);
+        rightEyeLid.setFill(Color.WHITE);
+        rightEyeLid.setStartAngle(150);
+        rightEyeLid.setLength(180);
+
 
         BODY_PARTS.add(rightEyeLiner);
         BODY_PARTS.add(leftEyeLiner);
         BODY_PARTS.add(leftEye);
         BODY_PARTS.add(rightEye);
 
+        BODY_PARTS.add(rightEyeLidLiner);
+        BODY_PARTS.add(leftEyeLidLiner);
+        BODY_PARTS.add(rightEyeLid);
+        BODY_PARTS.add(leftEyeLid);
     }
 
     private void initPupils(){
-        Circle leftPupil = new Circle(leftEye.getCenterX(), leftEye.getCenterY(), leftEye.getRadius() * 1 / 7);
+        leftPupil = new Circle(leftEye.getCenterX(), leftEye.getCenterY() - (leftEye.getRadius() / 8), leftEye.getRadius() * 1 / 3);
         leftPupil.setFill(Color.BLUE);
-        Circle rightPupil = new Circle(rightEye.getCenterX(), rightEye.getCenterY(), rightEye.getRadius() * 1 / 7);
+        rightPupil = new Circle(rightEye.getCenterX(), rightEye.getCenterY() - (rightEye.getRadius() / 8), rightEye.getRadius() * 1 / 3);
         rightPupil.setFill(Color.BLUE);
         BODY_PARTS.add(leftPupil);
         BODY_PARTS.add(rightPupil);
     }
 
+    private void initSadMouth(){
+        sadMouth = new Arc();
+        sadMouth.setLength(180);
+        sadMouth.setStartAngle(0);
+        sadMouth.setType(ArcType.ROUND);
+        sadMouth.setRadiusY(ghostHead.getRadiusY() / 2);
+        sadMouth.setRadiusX(ghostHead.getRadiusX() / 1.5);
+        sadMouth.setCenterY(ghostHead.getCenterY() + ghostHead.getRadiusY() / 1.7);
+        sadMouth.setCenterX(ghostHead.getCenterX());
+        sadMouth.setFill(this.color); //blend in until it needs to be shown.
+        BODY_PARTS.add(sadMouth);
+    }
+
     private Color getRandomColor(){
         Random random = new Random();
         return colors[random.nextInt(colors.length - 1)];
+    }
+
+    public void colorFearful(){
+        body.setFill(Color.BLUE);
+        ghostHead.setFill(Color.BLUE);
+        leftPupil.setCenterX(leftPupil.getCenterX() - (leftPupil.getRadius() * .7));
+        rightPupil.setCenterX(rightPupil.getCenterX() + (rightPupil.getRadius() * .7));
+
+        rightPupil.setCenterY(rightPupil.getCenterY() - rightPupil.getRadius() * .8);
+        leftPupil.setCenterY(leftPupil.getCenterY() - leftPupil.getRadius() * .8);
+        //make all these basically invisible
+
+        leftEyeLid.setFill(Color.BLUE);
+        rightEyeLid.setFill(Color.BLUE);
+        rightEyeLidLiner.setFill(Color.BLACK);
+        leftEyeLidLiner.setFill(Color.BLACK);
+        sadMouth.setFill(Color.BLACK);
+        colorFearful = true;
+    }
+
+    private void returnToNormalColor(){
+        ghostHead.setFill(this.color);
+        body.setFill(this.color);
+
+        leftPupil.setCenterX(leftPupil.getCenterX() + (leftPupil.getRadius() * .7));
+        rightPupil.setCenterX(rightPupil.getCenterX() - (rightPupil.getRadius() * .7));
+        leftPupil.setCenterY(leftPupil.getCenterY() + leftPupil.getRadius() * .8);
+        rightPupil.setCenterY(rightPupil.getCenterY() + rightPupil.getRadius() * .8);
+
+        leftEyeLid.setFill(Color.WHITE);
+        rightEyeLid.setFill(Color.WHITE);
+        rightEyeLidLiner.setFill(Color.WHITE);
+        leftEyeLidLiner.setFill(Color.WHITE);
+        rightEyeLiner.setFill(Color.BLACK);
+        leftEyeLiner.setFill(Color.BLACK);
+
+        //make invisible again.
+        sadMouth.setFill(this.color);
+        colorFearful = false;
     }
 
     public LinkedList<Node> getBody(){

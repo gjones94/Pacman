@@ -23,7 +23,10 @@ public class MapCell extends Rectangle{
     private final List<Rectangle> cellBorders;
     private final double borderSize;
 
-    //POINTERS TO NEIGHBORS
+    //POINTERS TO NEIGHBORS & starting positions
+    private static MapCell ghostStart;
+    private static MapCell pacmanStart;
+    private boolean isBoosterCell;
     private MapCell leftNeighbor;
     private MapCell rightNeighbor;
     private MapCell topNeighbor;
@@ -40,6 +43,7 @@ public class MapCell extends Rectangle{
         cellBorders = new ArrayList<>();
         this.border = border;
         this.portal = portal;
+        this.isBoosterCell = false;
         this.color = color;
         cellMidX = (xPos + (xPos + size)) / 2; //used for determining location of food and for movement of pacman.
         cellMidY = (yPos + (yPos + size)) / 2;
@@ -62,6 +66,7 @@ public class MapCell extends Rectangle{
 
         return new MapCell(x, y);
     }
+
     private MapCell getCellContainingCoordinates(double x, double y){
         return cellFactory(x, y, getSize());
     }
@@ -75,13 +80,16 @@ public class MapCell extends Rectangle{
         return portal;
     }
 
+    public boolean isBoosterCell(){
+        return isBoosterCell;
+    };
+
     public boolean isFoodAvailable(){
         return cellFood.isFoodAvailable();
     }
     //================================================================================================
 
     //======================================GETTERS===================================================
-
     public double getCenterX(){return cellMidX;}
 
     public double getCenterY(){return cellMidY;}
@@ -140,9 +148,32 @@ public class MapCell extends Rectangle{
     }
 
     public Food getCellFood(){return this.cellFood;}
+
+    @Override
+    public boolean equals(Object obj) {
+        double threshold = .00001;
+        if(obj instanceof MapCell)
+            return (Math.abs(((MapCell) obj).getX() - getX()) <= threshold && Math.abs( ((MapCell) obj).getY() - getY()) <= threshold);
+        else
+            return false;
+    }
     //================================================================================================
 
     //======================================SETTERS===================================================
+
+    public void setGhostStart(){
+        ghostStart = this;
+    }
+
+    public void setPacmanStart(){
+        pacmanStart = this;
+    }
+
+    public void setBoosterCell(){
+        this.getCellFood().makeBoosterFood();
+        this.isBoosterCell = true;
+    }
+
     public void setCellNeighbors(double[] mapDimensions, LinkedList<MapCell> cellMap){ //sets the neighbors based on this cell's info
         double firstXPosition = 0;
         double firstYPosition = getSize() * 2;
@@ -297,14 +328,7 @@ public class MapCell extends Rectangle{
         mapFoodLeft++;
     } //used when initializing the main game map to count how much food is left in the map.
 
-    @Override
-    public boolean equals(Object obj) {
-        double threshold = .00001;
-        if(obj instanceof MapCell)
-            return (Math.abs(((MapCell) obj).getX() - getX()) <= threshold && Math.abs( ((MapCell) obj).getY() - getY()) <= threshold);
-        else
-            return false;
-    }
+
 
     //================================================================================================
 
@@ -316,6 +340,11 @@ public class MapCell extends Rectangle{
         private Food(double x, double y, double radius){
             super (x, y, radius * .04);
             super.setFill(Color.TAN);
+        }
+
+        public void makeBoosterFood(){
+            super.setRadius(getRadius() * 5);
+            super.setFill(Color.YELLOW);
         }
 
         public boolean isFoodAvailable(){

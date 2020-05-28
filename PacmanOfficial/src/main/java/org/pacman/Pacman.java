@@ -34,6 +34,8 @@ public class Pacman extends Arc {
     //reference point for current location
     private MapCell cellOccupied; //for current location
 
+    private boolean beastMode;
+
     //===================================CONSTRUCTORS============================================================
     public Pacman(double x, double y, double r){
         super(x, y, r, r, ANGLE_LEFT, MOUTH_OPEN);
@@ -302,6 +304,9 @@ public class Pacman extends Arc {
     public void eatFood(MapCell mapCell){
         if(cellOccupied.isFoodAvailable()){
             mapCell.removeCellFood();
+            if(cellOccupied.isBoosterCell()){
+                beastMode = true;
+            }
 //            soundEffects.play("munch.wav");
             score+=10;
         }
@@ -345,5 +350,13 @@ public class Pacman extends Arc {
     //================================GETTERS FOR OBJECTS AND STATISTICS==================================
     public int getScore(){
         return  score;
+    }
+
+    public boolean isInBeastMode(){
+        return beastMode;
+    }
+
+    public void resetBoostMode(){
+        beastMode = false;
     }
 }
