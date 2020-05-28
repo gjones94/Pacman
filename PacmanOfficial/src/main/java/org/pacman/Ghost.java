@@ -7,7 +7,6 @@ import javafx.scene.shape.ArcType;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Polygon;
 
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Random;
 
@@ -15,7 +14,7 @@ public class Ghost {
 
     //===========================================STATE=======================================================
     private boolean vulnerable = false;
-    private boolean respawn = false;
+    private boolean alive = true;
     private int respawnTimer = 420;
     //=======================================================================================================
 
@@ -70,7 +69,7 @@ public class Ghost {
     private Arc rightEyeLidLiner;
     private Color color;
     private Arc sadMouth;
-    private boolean colorFearful;
+    private boolean colorVulnerable;
     //======================================================================================================
 
     public Ghost(MapCell cell, Pacman pacman, double distance){
@@ -89,7 +88,7 @@ public class Ghost {
             if(getDistanceFromPlayer(this.xMid, this.yMid, pacman.getCenterX(), pacman.getCenterY()) < (cellOccupied.getSize() * 5)){
                 moveIntelligently();
             }else{
-                moveRandomly();
+                move();
             }
     }
 
@@ -99,7 +98,7 @@ public class Ghost {
         return Math.sqrt((xDistance*xDistance) + (yDistance * yDistance));
     }
 
-    public void moveRandomly(){
+    public void move(){
         currentCanMove = executeDirection(currentDirection);
         nextCanMove = executeDirection(nextDirection);
 
@@ -350,21 +349,25 @@ public class Ghost {
         return vulnerable;
     }
 
-    public void makeVulnerable(){
+    public void setVulnerable(){
         vulnerable = true;
-        if(!colorFearful){//prevents duplicate coloring when pacman eats a booster before this returns to normal.
-            colorFearful();
+        if(!colorVulnerable){//prevents bad face adjustment when pacman eats a booster before this returns to normal.
+            setFaceVulnerable();
         }
+        setColorVulnerable();
     }
 
-    public void setToNormalMode(){
+    public void setNotVulnerable(){
         vulnerable = false;
-        returnToNormalColor();
+        setFaceNormal();
+        setColorAlive();
     }
 
-    public void respawn(MapCell cell){
-        this.cellOccupied = cell;
-        respawn = true;
+    public void kill(){
+        alive = false;
+        setFaceNormal();
+        setColorDead();
+        this.cellOccupied = Map.getGhostStartingPosition(); //set cell back at spawn
         for(Node node: BODY_PARTS){
             node.setLayoutX(0);
             node.setLayoutY(0);
@@ -374,28 +377,26 @@ public class Ghost {
         updateBounds();
     }
 
-    public boolean needsToRespawn(){
-        return respawn;
-    }
-
-    public void countDownRespawn(){
-        respawnTimer--;
-    }
-
-    public int getRespawnTime(){
-        return respawnTimer;
-    }
-
-    public void resetSpawn(){
-        respawn = false;
-        respawnTimer = 420;
-    }
-
-    public void ghostWarning(){
-        if(colorFearful){
-            returnToNormalColor();
+    public void tryRespawn(){
+        if(respawnTimer == 0){
+            setColorAlive();
+            alive = true;
         }else{
-            colorFearful();
+            respawnTimer--;
+        }
+    }
+
+    public boolean isAlive(){
+        return alive;
+    }
+
+    public void showWarning(){//cycles colors to warn user that he is about to turn back to normal
+        if(colorVulnerable){ //switch back to normal
+            setFaceNormal();
+            setColorAlive();
+        }else{ //switch back to vulnerable
+            setFaceVulnerable();
+            setColorVulnerable();
         }
     }
 
@@ -558,43 +559,56 @@ public class Ghost {
         return colors[random.nextInt(colors.length - 1)];
     }
 
-    public void colorFearful(){
-        body.setFill(Color.BLUE);
-        ghostHead.setFill(Color.BLUE);
-        leftPupil.setCenterX(leftPupil.getCenterX() - (leftPupil.getRadius() * .7));
-        rightPupil.setCenterX(rightPupil.getCenterX() + (rightPupil.getRadius() * .7));
-
-        rightPupil.setCenterY(rightPupil.getCenterY() - rightPupil.getRadius() * .8);
-        leftPupil.setCenterY(leftPupil.getCenterY() - leftPupil.getRadius() * .8);
-        //make all these basically invisible
-
-        leftEyeLid.setFill(Color.BLUE);
-        rightEyeLid.setFill(Color.BLUE);
-        rightEyeLidLiner.setFill(Color.BLACK);
-        leftEyeLidLiner.setFill(Color.BLACK);
-        sadMouth.setFill(Color.BLACK);
-        colorFearful = true;
+    private void setColorDead(){
+        for(Node node: BODY_PARTS){
+            if(node instanceof Arc){
+                ((Arc) node).setFill(null);
+            }else if(node instanceof Circle){
+                ((Circle) node).setFill(null);
+            }else{
+                ((Polygon) node).setFill(null);
+            }
+        }
     }
 
-    private void returnToNormalColor(){
+    private void setColorAlive(){
         ghostHead.setFill(this.color);
         body.setFill(this.color);
-
-        leftPupil.setCenterX(leftPupil.getCenterX() + (leftPupil.getRadius() * .7));
-        rightPupil.setCenterX(rightPupil.getCenterX() - (rightPupil.getRadius() * .7));
-        leftPupil.setCenterY(leftPupil.getCenterY() + leftPupil.getRadius() * .8);
-        rightPupil.setCenterY(rightPupil.getCenterY() + rightPupil.getRadius() * .8);
-
         leftEyeLid.setFill(Color.WHITE);
         rightEyeLid.setFill(Color.WHITE);
         rightEyeLidLiner.setFill(Color.WHITE);
         leftEyeLidLiner.setFill(Color.WHITE);
         rightEyeLiner.setFill(Color.BLACK);
         leftEyeLiner.setFill(Color.BLACK);
-
-        //make invisible again.
         sadMouth.setFill(this.color);
-        colorFearful = false;
+    }
+
+    private void setFaceNormal(){
+        leftPupil.setCenterX(leftPupil.getCenterX() + (leftPupil.getRadius() * .7));
+        rightPupil.setCenterX(rightPupil.getCenterX() - (rightPupil.getRadius() * .7));
+        leftPupil.setCenterY(leftPupil.getCenterY() + leftPupil.getRadius() * .8);
+        rightPupil.setCenterY(rightPupil.getCenterY() + rightPupil.getRadius() * .8);
+        colorVulnerable = false;
+    }
+
+    private void setFaceVulnerable(){
+        leftPupil.setCenterX(leftPupil.getCenterX() - (leftPupil.getRadius() * .7));
+        rightPupil.setCenterX(rightPupil.getCenterX() + (rightPupil.getRadius() * .7));
+
+        rightPupil.setCenterY(rightPupil.getCenterY() - rightPupil.getRadius() * .8);
+        leftPupil.setCenterY(leftPupil.getCenterY() - leftPupil.getRadius() * .8);
+        //make all these basically invisible
+        colorVulnerable = true;
+    }
+
+    private void setColorVulnerable(){
+        body.setFill(Color.BLUE);
+        ghostHead.setFill(Color.BLUE);
+        leftEyeLid.setFill(Color.BLUE);
+        rightEyeLid.setFill(Color.BLUE);
+        rightEyeLidLiner.setFill(Color.BLACK);
+        leftEyeLidLiner.setFill(Color.BLACK);
+        sadMouth.setFill(Color.BLACK);
     }
 
     public LinkedList<Node> getBody(){

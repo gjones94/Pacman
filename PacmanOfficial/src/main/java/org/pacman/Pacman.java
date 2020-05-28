@@ -34,7 +34,7 @@ public class Pacman extends Arc {
     //reference point for current location
     private MapCell cellOccupied; //for current location
 
-    private boolean beastMode;
+    private boolean invincible;
 
     //===================================CONSTRUCTORS============================================================
     public Pacman(double x, double y, double r){
@@ -305,7 +305,7 @@ public class Pacman extends Arc {
         if(cellOccupied.isFoodAvailable()){
             mapCell.removeCellFood();
             if(cellOccupied.isBoosterCell()){
-                beastMode = true;
+                invincible = true;
             }
 //            soundEffects.play("munch.wav");
             score+=10;
@@ -352,11 +352,11 @@ public class Pacman extends Arc {
         return  score;
     }
 
-    public boolean isInBeastMode(){
-        return beastMode;
+    public boolean isInvincible(){
+        return invincible;
     }
 
-    public void resetBoostMode(){
-        beastMode = false;
+    public void resetInvicibility(){
+        invincible = false;
     }
 }

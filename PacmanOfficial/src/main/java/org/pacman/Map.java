@@ -161,19 +161,6 @@ public class Map {
 
     }
 
-    public void kill(Ghost ghost){
-        mapPane.getChildren().removeAll(ghost.getBody());
-    }
-
-    public boolean respawnAttempt(Ghost ghost){
-        if(ghost.getRespawnTime() == 0){
-            ghost.resetSpawn();
-            mapPane.getChildren().addAll(ghost.getBody());
-            return true;
-        }
-        return false;
-    }
-
     private void initStatistics() {
         mapStatistics = new Map.Statistics();
         mapObjects.add(mapStatistics.getSCORE_LABEL());
@@ -194,11 +181,11 @@ public class Map {
         return mapPane;
     }
 
-    public MapCell getPacManStartingPosition() {//FIXME, needs to be based on the map indicator.
+    public static MapCell getPacManStartingPosition() {//FIXME, needs to be based on the map indicator.
         return pacmanStartPosition;
     }
 
-    public MapCell getGhostStartingPosition(){//FIXME, needs to be based on the map indicator.
+    public static MapCell getGhostStartingPosition(){//FIXME, needs to be based on the map indicator.
         return ghostStartPosition;
     }
 

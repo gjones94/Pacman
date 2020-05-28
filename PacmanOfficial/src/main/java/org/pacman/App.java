@@ -72,10 +72,10 @@ public class App extends Application {
     private int mapLevel = 1; //beginning level.
     private boolean gameOver = false;
     private boolean win = false;
-    private boolean collidedWithPlayer = false;
-    private boolean vulnerableMode = false;
-    private boolean ghostResetToNormal = false;
-    private int vulnerableTimer;
+    private boolean playerIsDead = false;
+    private boolean ghostVulnerable = false;
+    private int vulnerableTimer = 480;
+    private boolean timerWarning = false;
 
 
     private static boolean paused = false;
@@ -293,13 +293,7 @@ public class App extends Application {
     public void onUpdate(long timeStamp){
         if(!gameOver){
             updatePlayer(timeStamp);
-
-            if(!vulnerableMode){
-                normalGhostUpdate();
-            }else{
-                vulnerableGhostUpdate();
-            }
-
+            updateGhosts();
             updateGameStats();
             lastUpdateTime.set(timeStamp);
         }else{
@@ -310,78 +304,65 @@ public class App extends Application {
 
     public void updatePlayer(double elapsedTime){
         checkForKeyEvent(elapsedTime - lastUpdateTime.get());
-        if(player.isInBeastMode()) {
-            vulnerableMode = true;
-            vulnerableTimer = 480;
-//            soundEffects.selectSound("untouchable"); //make this random
-//            soundEffects.play();
-            player.resetBoostMode(); //resets so that he can eat another booster.
+        if(player.isInvincible()) {
+            ghostVulnerable = true;
+            player.resetInvicibility(); //resets so that he can eat another booster.
         }
     }
 
-    public void normalGhostUpdate(){
+    public void updateGhosts(){
+
+        if(ghostVulnerable){
+            if(vulnerableTimer != 0){
+                if(vulnerableTimer == 480) {
+                    initVulnerability();
+                }else if(vulnerableTimer <61 && vulnerableTimer % 10 == 0){
+                    timerWarning = true;
+                }
+                vulnerableTimer--;
+           }else{
+                endVulnerability();
+           }
+        }
+
         for(Ghost ghost: ghosts){
-            ghost.moveRandomly();
-            if(collisionCheck(ghost)){
-                break; //exits this, and will end the game.
-            }
-        }
-    }
-
-    private void vulnerableGhostUpdate(){
-        vulnerableMusic();
-        
-    }
-
-    private void vulnerableMusic(){
-        if(vulnerableMode && !intenseMusic){
-            intenseMusic = true;
-            changeMusic("intense");
-        }else if(!vulnerableMode && intenseMusic){
-            intenseMusic = false;
-            changeMusic(gameMusic);
-        }
-    }
-
-    private void vulnerableCountDown(){
-
-    }
-
-    private void makeVulnerable(Ghost ghost){
-
-    }
-
-
-
-    private boolean ifAlive(Ghost ghost){
-        if(!ghost.needsToRespawn()){
-            return true;
-        }else{
-
-            return false;
-        }
-    }
-
-    private boolean collisionCheck(Ghost ghost){
-        if(ghost.collidedWithPlayer() && ifAlive(ghost)){
-            if(ghost.isVulnerable()){
-                gameMap.kill(ghost);
-                soundEffects.selectSound("scream");
-                soundEffects.play();
-                ghost.respawn(gameMap.getGhostStartingPosition());
+            if(ghost.isAlive()){
+                ghost.move();
+                if(timerWarning){
+                    ghost.showWarning();
+                }
+                if(ghost.collidedWithPlayer()){
+                    if(ghost.isVulnerable()){
+                        ghost.kill();
+                        soundEffects.selectSound("scream");
+                        soundEffects.play();
+                    }
+                    else{
+                        playerIsDead = true;
+                        break;
+                    }
+                }
             }else{
-                collidedWithPlayer = true;
-                return true;
+                ghost.tryRespawn();
             }
         }
-        return false;
     }
 
-    private void respawnAttempt(Ghost ghost){
-        if(!gameMap.respawnAttempt(ghost)){
-            ghost.countDownRespawn();
-        };
+    private void initVulnerability(){
+        changeMusic("intense");
+        for(Ghost ghost: ghosts){
+            ghost.setVulnerable();
+        }
     }
+
+    private void endVulnerability(){
+        vulnerableTimer = 480;
+        timerWarning = false;
+        for(Ghost ghost: ghosts){
+            ghost.setNotVulnerable();
+        }
+    }
+    //============================================================================================================
 
     private void updateGameStats(){
         gameMap.updateScore(player.getScore());
@@ -392,7 +373,7 @@ public class App extends Application {
         if(gameMap.getMapFoodLeft() == 0){
             win = true;
             gameOver = true;
-        }else if(collidedWithPlayer){
+        }else if(playerIsDead){
             win =  false;
             gameOver = true;
         }
@@ -401,7 +382,7 @@ public class App extends Application {
     public void resetGame(){
         MapCell.resetFood(); //puts food back to original count.
         gameOver = false;
-        collidedWithPlayer = false;
+        playerIsDead = false;
         win = false;
         paused = false;
     }
