@@ -32,9 +32,9 @@ public class SoundEffects {
     }
 
     public synchronized void selectSound(String name){
-        if(clip.isActive()){
-            clip.stop();
-        }
+//        if(clip.isActive()){
+//            clip.stop();
+//        }
         clip = clips.get(name);
         clip.setFramePosition(0);
     }

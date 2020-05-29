@@ -33,9 +33,14 @@ public class Music{
         }
     }
 
-    public synchronized void selectSong(String name){
+    public synchronized void selectSong(String name, boolean resetPosition){
+        if(clip.isActive()){
+            clip.stop();
+        }
         clip = clips.get(name);
-        clip.setFramePosition(0);
+        if(resetPosition){
+            clip.setFramePosition(0);
+        }
     }
 
     public synchronized void getThreadReady(){//sets the thread into the while loop, once the boolean is true, and the thread is notified, it will begin playing.

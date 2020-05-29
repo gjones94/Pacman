@@ -44,7 +44,7 @@ public class Map {
     private LinkedList<MapCell> currentMap; //list of cells that are drawn to the map.
     private LinkedList<MapCell> nonBorderCells; //used to randomly position player
 
-    private Pane mapPane;
+    private static Pane mapPane;
     private Scene mainScene;
 
     private Statistics mapStatistics;
@@ -170,6 +170,7 @@ public class Map {
     private void initAttachMapObjects(){
         mapPane.getChildren().addAll(mapObjects);
     }
+
     //================================================================================================
 
     //=================================GETTERS========================================================

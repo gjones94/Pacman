@@ -351,8 +351,7 @@ public class Ghost {
 
     public void setVulnerable(){
         vulnerable = true;
-        if(!colorVulnerable){//prevents bad face adjustment when pacman eats a booster before this returns to normal.
-            setFaceVulnerable();
+        if(!colorVulnerable && alive){//prevents coloring dead and recoloring pacman eats a booster before this returns to normal.
             setColorVulnerable();
             colorVulnerable = true;
         }
@@ -361,8 +360,9 @@ public class Ghost {
 
     public void setNotVulnerable(){
         vulnerable = false;
-        setFaceNormal();
-        setColorAlive();
+        if(alive){
+            setColorAlive();
+        }
         colorVulnerable = false;
     }
 
@@ -379,13 +379,11 @@ public class Ghost {
         updateBounds();
     }
 
-    public void tryRespawn(){
+    public boolean tryRespawn(){
         if(respawnTimer == 0){
             if(vulnerable){
-                setFaceVulnerable();
                 setColorVulnerable();
             }else{
-                setFaceNormal();
                 setColorAlive();
             }
             alive = true;
@@ -393,6 +391,7 @@ public class Ghost {
         }else{
             respawnTimer--;
         }
+        return alive;
     }
 
     public boolean isAlive(){
@@ -400,15 +399,15 @@ public class Ghost {
     }
 
     public void showWarning(){//cycles colors to warn user that he is about to turn back to normal
-        if(colorVulnerable){ //switch back to normal
-            setFaceNormal();
-            setColorAlive();
-            colorVulnerable = false;
-        }else{ //switch back to vulnerable
-            setFaceVulnerable();
-            setColorVulnerable();
-            colorVulnerable = true;
+        if(alive){
+            if(colorVulnerable){ //switch back to normal
+                setColorAlive();
+            }else{ //switch back to vulnerable
+                setColorVulnerable();
+                colorVulnerable = true;
+            }
         }
+
     }
 
     //======================================CONSTRUCT THE ENEMY BODY============================================
@@ -584,16 +583,24 @@ public class Ghost {
         leftPupil.setFill(Color.BLUE);
         rightPupil.setFill(Color.BLUE);
         sadMouth.setFill(this.color);
+        colorVulnerable = false;
     }
 
     private void setColorVulnerable(){
         body.setFill(Color.BLUE);
         ghostHead.setFill(Color.BLUE);
+        leftEye.setFill(Color.WHITE);
+        rightEye.setFill(Color.WHITE);
+        rightEyeLiner.setFill(Color.BLACK);
+        leftEyeLiner.setFill(Color.BLACK);
         leftEyeLid.setFill(Color.BLUE);
         rightEyeLid.setFill(Color.BLUE);
+        rightPupil.setFill(Color.BLUE);
+        leftPupil.setFill(Color.BLUE);
         rightEyeLidLiner.setFill(Color.BLACK);
         leftEyeLidLiner.setFill(Color.BLACK);
         sadMouth.setFill(Color.BLACK);
+        colorVulnerable = true;
     }
 
     private void setColorDead(){
@@ -606,20 +613,6 @@ public class Ghost {
                 ((Polygon) node).setFill(null);
             }
         }
-    }
-
-    private void setFaceNormal(){
-        leftPupil.setCenterX(leftPupil.getCenterX() + (leftPupil.getRadius() * .7));
-        rightPupil.setCenterX(rightPupil.getCenterX() - (rightPupil.getRadius() * .7));
-        leftPupil.setCenterY(leftPupil.getCenterY() + leftPupil.getRadius() * .8);
-        rightPupil.setCenterY(rightPupil.getCenterY() + rightPupil.getRadius() * .8);
-    }
-
-    private void setFaceVulnerable(){
-        leftPupil.setCenterX(leftPupil.getCenterX() - (leftPupil.getRadius() * .7));
-        rightPupil.setCenterX(rightPupil.getCenterX() + (rightPupil.getRadius() * .7));
-        rightPupil.setCenterY(rightPupil.getCenterY() - rightPupil.getRadius() * .8);
-        leftPupil.setCenterY(leftPupil.getCenterY() - leftPupil.getRadius() * .8);
     }
 
     public LinkedList<Node> getBody(){

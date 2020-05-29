@@ -134,7 +134,7 @@ public class App extends Application {
         soundThread.start();
 
         music = new Music();
-        music.selectSong(mainMenuMusic);
+        music.selectSong(mainMenuMusic, true);
         Thread musicThread = new Thread(new runMusic(music));
         musicThread.start(); //thread enters music class loop to play music when notified.
     }
@@ -187,7 +187,7 @@ public class App extends Application {
 //        double ghostSpeed = (pixelSize == 18) ? 1 : 2.0; //for mom, need to set to .5 or 1
         double ghostSpeed = (pixelSize == 18) ? 1.5 : 2.5; //for mom, need to set to .5 or 1
         for(int i = 0; i < numberOfGhosts; i++){
-            Ghost ghost = new Ghost(gameMap.getGhostStartingPosition(), player, ghostSpeed);
+            Ghost ghost = new Ghost(Map.getGhostStartingPosition(), player, ghostSpeed);
             ghosts.add(ghost);
             gameMap.initGhost(ghost);
         }
@@ -203,7 +203,7 @@ public class App extends Application {
         mainStage.show();
         mainStage.setOnCloseRequest(closeWindow);
         if(startMusic){
-            changeMusic(mainMenuMusic);
+            changeMusic(mainMenuMusic, true);
         }
     }
 
@@ -212,7 +212,7 @@ public class App extends Application {
         endMenu = new EndMenu(gameMap.getTime(), win);
         music.stop();
         if(win){
-            changeMusic(winMusic);
+            changeMusic(winMusic, true);
         }else{
             soundEffects.selectSound(loseMusic);
             soundEffects.play();
@@ -240,15 +240,15 @@ public class App extends Application {
         initKeyCommands(gameMap.getScene()); //bind keystroke actions to the main scene window
         initPacMan(); //create the pac-man player.
         initGhosts();
-        changeMusic(gameMusic);
+        changeMusic(gameMusic, true);
         bootGame(); //starts the game loop.
     }
 
-    private void changeMusic(String name){
+    private void changeMusic(String name, boolean resetPosition){
         if(music.isPlaying()){
             music.stop();
         }
-        music.selectSong(name);
+        music.selectSong(name, resetPosition);
         music.play();
     }
 
@@ -327,30 +327,36 @@ public class App extends Application {
         }
 
         for(Ghost ghost: ghosts){
-            if(ghost.isAlive()){
-                ghost.move();
-                if(timerWarning){
-                    ghost.showWarning();
+            if(!ghost.isAlive()){
+                if(!ghost.tryRespawn()){
+                    continue; //move to next ghost if he didn't come back to life.
                 }
-                if(ghost.collidedWithPlayer()){
-                    if(ghost.isVulnerable()){
-                        ghost.kill();
-                        soundEffects.selectSound("scream");
-                        soundEffects.play();
-                    }
-                    else{
-                        playerIsDead = true;
-                        break;
-                    }
+            }
+            ghost.move();
+            if(timerWarning){
+                ghost.showWarning();
+            }
+            if(ghost.isAlive() && ghost.collidedWithPlayer()){
+                if(ghost.isVulnerable()){
+                    ghost.kill();
+                    soundEffects.selectSound("scream");
+                    soundEffects.play();
                 }
-            }else{
-                ghost.tryRespawn();
+                else{
+                    playerIsDead = true;
+                    break;
+                }
             }
         }
     }
 
     private void initVulnerability(){
-        changeMusic(intenseMusic);
+        if(ghostVulnerable){
+            changeMusic(intenseMusic, false);
+        }else{
+            changeMusic(intenseMusic, true);
+        }
+
         for(Ghost ghost: ghosts){
             ghost.setVulnerable();
         }
@@ -360,7 +366,7 @@ public class App extends Application {
         ghostVulnerable = false;
         vulnerableTimer = 480;
         timerWarning = false;
-        changeMusic(gameMusic);
+        changeMusic(gameMusic, false);
         for(Ghost ghost: ghosts){
             ghost.setNotVulnerable();
         }
@@ -388,6 +394,8 @@ public class App extends Application {
         playerIsDead = false;
         win = false;
         paused = false;
+        vulnerableTimer = 480;
+        ghostVulnerable = false;
     }
     //============================================================================================================
 
@@ -439,7 +447,7 @@ public class App extends Application {
                 break;
             case "SAVE":
                 scoreSaver.addScoreToList();
-                changeMusic(mainMenuMusic);
+                changeMusic(mainMenuMusic, true);
                 showLeaderBoard();
                 break;
             case "EXIT":
@@ -493,15 +501,7 @@ public class App extends Application {
         private final VBox vbox = new VBox();
         private final Scene startMenuScene;
         private final List<Circle> borderDots = new LinkedList<>();
-
-        private MenuButton start;
-        private MenuButton leaderBoard;
-        private MenuButton options;
-        private MenuButton exit;
         private final List<MenuButton> buttons = new LinkedList<>();
-
-        private Text mainMenu;
-        private Font font;
 
         public MainMenu(){
             initGrid();
@@ -567,14 +567,14 @@ public class App extends Application {
         }
 
         private void initButtons() {
-            font = new Font(fontName, vbox.getPrefWidth() / 14);
+            Font font = new Font(fontName, vbox.getPrefWidth() / 14);
             double width = vbox.getPrefWidth();
             double height = vbox.getPrefHeight() / 10;
 
-            start = new MenuButton("START", font, width, height);
-            leaderBoard = new MenuButton("LEADER BOARD", font, width, height);
-            options = new MenuButton("OPTIONS", font, width, height);
-            exit = new MenuButton("EXIT", font, width, height);
+            MenuButton start = new MenuButton("START", font, width, height);
+            MenuButton leaderBoard = new MenuButton("LEADER BOARD", font, width, height);
+            MenuButton options = new MenuButton("OPTIONS", font, width, height);
+            MenuButton exit = new MenuButton("EXIT", font, width, height);
 
             buttons.add(start);
             buttons.add(leaderBoard);
@@ -592,7 +592,7 @@ public class App extends Application {
         }
 
         private void initDrawLogo() {
-            mainMenu = new Text("P A C M A N");
+            Text mainMenu = new Text("P A C M A N");
             mainMenu.setFont(new Font(fontName, topHBox.getPrefHeight() / 1.5));
             mainMenu.setFill(Color.YELLOW);
             topHBox.getChildren().add(mainMenu);

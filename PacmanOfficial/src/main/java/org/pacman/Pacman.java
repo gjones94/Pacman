@@ -34,7 +34,7 @@ public class Pacman extends Arc {
     //reference point for current location
     private MapCell cellOccupied; //for current location
 
-    private boolean invincible;
+    private boolean invincible = false;
 
     //===================================CONSTRUCTORS============================================================
     public Pacman(double x, double y, double r){
