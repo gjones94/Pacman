@@ -18,7 +18,6 @@ public class Ghost {
     private int respawnTimer = 420;
     //=======================================================================================================
 
-
     //====================================DIRECTIONAL CONSTANTS==============================================
     private final static String LEFT = "LEFT";
     private final static String RIGHT = "RIGHT";
@@ -46,9 +45,8 @@ public class Ghost {
     //======================================================================================================
 
     //intelligent movement variables
-    private String shorterMovement = "";
-    private String longerMovement = "";
-
+    private final String[] smartDirections = new String[3];
+    private String lastMove;
 
     private final LinkedList<Node> BODY_PARTS = new LinkedList<>();
 
@@ -84,29 +82,37 @@ public class Ghost {
         chooseNextDirection();
     }
 
-    public void lookForPlayer(){//how enemy will update it's knowledge of where the player is.
-            if(getDistanceFromPlayer(this.xMid, this.yMid, pacman.getCenterX(), pacman.getCenterY()) < (cellOccupied.getSize() * 5)){
-                moveIntelligently();
-            }else{
-                move();
+    public void move(){//how enemy will update it's knowledge of where the player is.\
+            if(horizontallyCentered() && verticallyCentered()){
+                findBestPaths(); //re-evaluate the best path each time you are in the center of a cell.
+            }
+
+            if(!(pacmanIsInRange() && moveIntelligently())){ //try to move intelligently, else move randomly.
+                moveRandomly();
             }
     }
 
-    public double getDistanceFromPlayer(double ghostX, double ghostY, double pacmanX, double pacmanY){
+    private boolean pacmanIsInRange(){
+        return getDistanceFromPlayer(this.xMid, this.yMid, pacman.getCenterX(), pacman.getCenterY()) < (cellOccupied.getSize() * 4);
+    }
+
+    private double getDistanceFromPlayer(double ghostX, double ghostY, double pacmanX, double pacmanY){
         double xDistance = Math.abs(ghostX - pacmanX);
         double yDistance = Math.abs(ghostY - pacmanY);
         return Math.sqrt((xDistance*xDistance) + (yDistance * yDistance));
     }
 
-    public void move(){
+    private void moveRandomly(){
+        nextCanMove = executeDirection(nextDirection); //interesting that I call both of these.
         currentCanMove = executeDirection(currentDirection);
-        nextCanMove = executeDirection(nextDirection);
 
         if(nextCanMove){
+            lastMove = nextDirection; //sets the last move for the intelligent decision to analyze.
             currentDirection = nextDirection;
             chooseNextDirection();
-        }
-        if(!currentCanMove && !nextCanMove){
+        }else if(currentCanMove){
+            lastMove = currentDirection;
+        }else{
             chooseCurrentDirection();
             chooseNextDirection();
         }
@@ -132,6 +138,9 @@ public class Ghost {
     }
 
     private boolean oppositeDirection(String next, String current){
+        if(next == null || current == null){
+            return false;
+        }
         switch (next){
             case UP:
                 if(current.equals(DOWN)){
@@ -157,35 +166,94 @@ public class Ghost {
     }
     //===================================================|
 
-
     //===================================INTELLIGENT MOVEMENT|
-    private void moveIntelligently(){
-            double xDistance = pacman.getCenterX() - this.xMid;
-            double yDistance = pacman.getCenterY() - this.yMid;
-
-            if(xDistance == 0){
-                //moveVertically
-            }else if(yDistance == 0){
-                //moveHorizontally
-            }
-
-            if(Math.abs(xDistance) < Math.abs(yDistance)){//shorter distance is on the x axis
-                if(xDistance < 0){
-                    shorterMovement = "LEFT";
+    private boolean moveIntelligently(){
+        for(String direction: smartDirections){ //go through the preferred directions in the direction array (calculated from the findBestPaths method).
+            if(direction != null && !oppositeDirection(direction, lastMove)){ //cannot move if direction is opposite of his last direction to prevent excessive backtracking over and over.
+                if(executeDirection(direction)){
+                    lastMove = direction; //record the last direction moved
+                    return true;
                 }
-                if(yDistance < 0){
-                    shorterMovement = "UP";
-                }
-            }else{//shorter distance is on the y axis
-
             }
-
-
+        }
+        return false;
     }
 
-    private void moveHorizontally(){
+    private void findBestPaths(){
+        String lineOfSight = getLineOfSight();
+        String[] shortAndLong = getShortAndLong();
 
+        smartDirections[0] = lineOfSight; //this path is the highest priority
+        smartDirections[1] = shortAndLong[0]; //second priority is to close down the longest distance.
+        smartDirections[2] = shortAndLong[1]; //3rd priority is to close down the shorter distance. (found that pursuit was most logical this way).
     }
+
+    private String getLineOfSight(){
+        if(pacman.getCenterX() == xMid){
+            if(pacmanIsAbove()){
+                return UP;
+            }else{
+                return DOWN;
+            }
+        }else if(pacman.getCenterY() == yMid){
+            if(pacmanOnLeft()){
+                return LEFT;
+            }else{
+                return RIGHT;
+            }
+        }
+        return null;
+    }
+
+    private boolean pacmanOnLeft(){
+        return pacman.getCenterX() - xMid < 0;
+    }
+
+    private boolean pacmanIsAbove(){
+        return pacman.getCenterY() - yMid < 0;
+    }
+
+    private String[] getShortAndLong(){
+        double xDistance = pacman.getCenterX() - xMid;
+        double yDistance = pacman.getCenterY() - yMid;
+
+        if (Math.abs(xDistance) == Math.abs(yDistance)) {
+            return randomOrderChoice(xDistance, yDistance);
+        }else if(Math.abs(xDistance) < Math.abs(yDistance)) {
+            return new String[]{getVerticalDirection(yDistance), getHorizontalDirection(xDistance)}; //vertical movement is priority
+        }else{
+            return new String[]{getHorizontalDirection(xDistance), getVerticalDirection(yDistance)}; //horizontal movement is priority
+        }
+    }
+
+    private String[] randomOrderChoice(double x, double y){
+        String horizontalDirection = getHorizontalDirection(x);
+        String verticalDirection = getVerticalDirection(y);
+
+        int randomChoice = new Random().nextInt(2);
+        if(randomChoice == 0){
+            return new String[]{horizontalDirection, verticalDirection};
+        }else{
+            return new String[]{verticalDirection, horizontalDirection};
+        }
+    }
+
+    private String getHorizontalDirection(double x){
+        if(x < 0){
+            return LEFT;
+        }else{
+            return RIGHT;
+        }
+    }
+
+    private String getVerticalDirection(double y){
+        if(y < 0) {
+            return UP;
+        }else{
+            return DOWN;
+        }
+    }
+
     //===================================================|
 
     //======================================NAVIGATIONAL METHODS============================================
@@ -333,6 +401,23 @@ public class Ghost {
         return xMid == cellOccupied.getCenterX();
     }
 
+    private boolean canMoveRight(){
+        return verticallyCentered() && !cellOccupied.getRightNeighbor().isBorder() && !cellOccupied.getRightNeighbor().isPortal();
+    }
+
+    private boolean canMoveLeft(){
+        return verticallyCentered() && !cellOccupied.getLeftNeighbor().isBorder() && !cellOccupied.getLeftNeighbor().isPortal();
+    }
+
+    private boolean canMoveUp(){
+        return horizontallyCentered() && !cellOccupied.getTopNeighbor().isBorder() && !cellOccupied.getTopNeighbor().isPortal();
+    }
+
+    private boolean canMoveDown(){
+        return horizontallyCentered() && !cellOccupied.getBottomNeighbor().isBorder() && !cellOccupied.getBottomNeighbor().isPortal();
+    }
+
+
     private void updateBounds(){
         xLeft = ghostHead.getCenterX() - ghostHead.getRadiusX() + ghostHead.getLayoutX();
         xRight = ghostHead.getCenterX() + ghostHead.getRadiusX() + ghostHead.getLayoutX();
@@ -341,7 +426,6 @@ public class Ghost {
         xMid = (xLeft + xRight) / 2;
         yMid = (yUp + yDown) / 2;
     }
-
     //==========================================================================================================
 
     //=========================================VULNERABILITY MODE METHODS=======================================
@@ -409,6 +493,7 @@ public class Ghost {
         }
 
     }
+    //==========================================================================================================
 
     //======================================CONSTRUCT THE ENEMY BODY============================================
     private void initGhost() {

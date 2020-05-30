@@ -1,9 +1,9 @@
 package org.pacman;
 
-public class runMusic implements Runnable {
+public class MusicRunnable implements Runnable {
 
     private Music music;
-    public runMusic(Music music){
+    public MusicRunnable(Music music){
         this.music = music;
     }
 

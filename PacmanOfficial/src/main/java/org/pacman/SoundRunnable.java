@@ -1,8 +1,8 @@
 package org.pacman;
 
-public class runSound implements Runnable{
+public class SoundRunnable implements Runnable{
     private SoundEffects soundEffects;
-    public runSound(SoundEffects soundEffects){
+    public SoundRunnable(SoundEffects soundEffects){
         this.soundEffects = soundEffects;
     }
 

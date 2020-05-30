@@ -130,12 +130,12 @@ public class App extends Application {
 
     private void initAudio(){
         soundEffects = new SoundEffects();
-        Thread soundThread = new Thread(new runSound(soundEffects));
+        Thread soundThread = new Thread(new SoundRunnable(soundEffects));
         soundThread.start();
 
         music = new Music();
         music.selectSong(mainMenuMusic, true);
-        Thread musicThread = new Thread(new runMusic(music));
+        Thread musicThread = new Thread(new MusicRunnable(music));
         musicThread.start(); //thread enters music class loop to play music when notified.
     }
     //============================================================================================================
