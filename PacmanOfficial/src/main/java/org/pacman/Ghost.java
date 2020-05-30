@@ -47,6 +47,7 @@ public class Ghost {
     //intelligent movement variables
     private final String[] smartDirections = new String[3];
     private String lastMove;
+    private boolean lastMoveWasRandom = false;
 
     private final LinkedList<Node> BODY_PARTS = new LinkedList<>();
 
@@ -86,14 +87,19 @@ public class Ghost {
             if(horizontallyCentered() && verticallyCentered()){
                 findBestPaths(); //re-evaluate the best path each time you are in the center of a cell.
             }
-
-            if(!(pacmanIsInRange() && moveIntelligently())){ //try to move intelligently, else move randomly.
+            if(vulnerable || !pacmanIsInRange()){ //this structure is purposeful to allow the ghost to move in the opposite direction IF they were previously NOT in range or were just vulnerable..
                 moveRandomly();
+                lastMoveWasRandom = true;
+            }else{
+                if(!moveIntelligently()){
+                    moveRandomly();
+                }
+                lastMoveWasRandom = false;
             }
     }
 
     private boolean pacmanIsInRange(){
-        return getDistanceFromPlayer(this.xMid, this.yMid, pacman.getCenterX(), pacman.getCenterY()) < (cellOccupied.getSize() * 4);
+        return getDistanceFromPlayer(this.xMid, this.yMid, pacman.getCenterX(), pacman.getCenterY()) < (cellOccupied.getSize() * 5);
     }
 
     private double getDistanceFromPlayer(double ghostX, double ghostY, double pacmanX, double pacmanY){
@@ -174,6 +180,9 @@ public class Ghost {
                     lastMove = direction; //record the last direction moved
                     return true;
                 }
+            }else if((smartDirections[0] != null) && lastMoveWasRandom && executeDirection(smartDirections[0])){
+                lastMove = smartDirections[0];
+                return true;
             }
         }
         return false;

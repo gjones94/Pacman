@@ -67,7 +67,7 @@ public class App extends Application {
 
     //--game objects
     private Pacman player;
-    private final int numberOfGhosts = 4; //FIXME should also be dependent on the map level.
+    private final int numberOfGhosts = 1; //FIXME should also be dependent on the map level.
     private List<Ghost> ghosts;
     private int mapLevel = 1; //beginning level.
     private boolean gameOver = false;
