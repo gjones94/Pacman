@@ -9,6 +9,7 @@ import javafx.event.EventHandler;
 import javafx.geometry.Pos;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
+import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
@@ -45,13 +46,17 @@ public class App extends Application {
 //    private static OptionsMenu optionsMenu;
     private static LeaderBoard leaderBoardMenu;
     private static ScoreSaver scoreSaver;
-    private static EndMenu endMenu;
+    private static GameOverMenu gameOverMenu;
     private static Map gameMap;
+    private static Statistics statistics;
+    private static Color levelColor;
 
-    private final String mapName = "original";
+
+    private String map; //identifies which map to use
     private final String backgroundColor = "-fx-background-color: black";
     private final String fontPath = "RainyDays.ttf";
     private final String fontName = "Rainy Days"; //must match name of it exactly within the file
+
 
 //    private final static String fontPath = "RainyDays.ttf";
 //    private final static String fontName = "Rainy Days"; //must match name of it exactly within the file
@@ -67,9 +72,11 @@ public class App extends Application {
 
     //--game objects
     private Pacman player;
-    private final int numberOfGhosts = 1; //FIXME should also be dependent on the map level.
+    private int numberOfGhosts = 4; //FIXME should also be dependent on the map level.
     private List<Ghost> ghosts;
-    private int mapLevel = 1; //beginning level.
+    private double playerSpeed;
+    private double ghostSpeed;
+    private int mapLevel = 2; //beginning level.
     private boolean gameOver = false;
     private boolean win = false;
     private boolean playerIsDead = false;
@@ -99,33 +106,16 @@ public class App extends Application {
     @Override
     public void start(Stage primaryStage){
         mainStage = primaryStage; //assign stage to variable to allow switching of scenes
-        initSettings(); //configures screen dimension and font.
+        screenDimensions = Screen.getPrimary().getVisualBounds();
+        initFonts();
+        initAudio();
+        initStatistics();
         showMainMenu(true); //this should have the start game method within it.
     }
 
     //=======================================INITIAL SETTINGS======================================================
-    private void initSettings(){
-        initFonts();
-        initPixelSize();
-        initAudio();
-    }
-
     private void initFonts(){
         Font.loadFont(getClass().getResource("/" + fontPath).toExternalForm(), 1);
-    }
-
-    private void initPixelSize(){//FIXME need to adjust speed too!!!
-        screenDimensions = Screen.getPrimary().getVisualBounds();
-        if(screenDimensions.getHeight() < 1080){
-//            pixelSize = 18;
-            pixelSize = 24;
-        }else{
-//            pixelSize = 30;
-            pixelSize = 40;
-        }
-
-
-
     }
 
     private void initAudio(){
@@ -138,15 +128,61 @@ public class App extends Application {
         Thread musicThread = new Thread(new MusicRunnable(music));
         musicThread.start(); //thread enters music class loop to play music when notified.
     }
+
+    private void initStatistics(){
+        statistics = new Statistics();
+    }
     //============================================================================================================
 
 
     //===================================GAME INITIALIZERS=========================================================
+    private void getLevelSettings(){
+        if(mapLevel == 3){
+            map = "difficult";
+            levelColor = Color.RED;
+            mapLevel = 1; //reset back to the next iteration of the maps. increase tracking distance. maybe increase ghosts.
+            Ghost.increaseTrackingDistance();
+        }else if(mapLevel == 2){
+            map = "intermediate";
+            levelColor = Color.GREEN;
+            mapLevel++;
+        }else{
+            levelColor = Color.BLUE;
+            map = "easy";
+            mapLevel++;
+        }
+
+    }
+
+    private void initPixelSize(){//FIXME need to adjust speed too!!!
+        screenDimensions = Screen.getPrimary().getVisualBounds();
+        if(map.equals("difficult")) {
+            if (screenDimensions.getHeight() < 1080) {
+                pixelSize = 18;
+                playerSpeed = 2.25;
+                ghostSpeed = 1.125;
+            } else {
+                pixelSize = 30;
+                playerSpeed = 3.75;
+                ghostSpeed = 1.875;
+            }
+        }else {
+            if (screenDimensions.getHeight() < 1080) {
+                pixelSize = 36;
+                playerSpeed = 3;
+                ghostSpeed = 2.25;
+            } else {
+                pixelSize = 48;
+                playerSpeed = 4;
+                ghostSpeed = 3;
+            }
+        }
+    }
+
     private void changeScene(Scene scene, Pane pane){
-        Rectangle2D primScreenBounds = Screen.getPrimary().getVisualBounds();
         mainStage.setScene(scene); //puts the main scene onto the stage
-        mainStage.setX((primScreenBounds.getWidth() - pane.getPrefWidth()) / 2);
-        mainStage.setY((primScreenBounds.getHeight() - pane.getPrefHeight()) / 2);
+        mainStage.setX((screenDimensions.getWidth() - pane.getPrefWidth()) / 2);
+        mainStage.setY((screenDimensions.getHeight() - pane.getPrefHeight()) / 2);
         mainStage.show();
     }
 
@@ -176,16 +212,13 @@ public class App extends Application {
     }
 
     private void initPacMan(){//FIXME feed pixel size to me
-//        double playerSpeed = (pixelSize == 18) ? 3 : 5;
-        double playerSpeed = (pixelSize == 18) ? 2.4 : 4;
         player = new Pacman(gameMap.getPacManStartingPosition(), playerSpeed); //sets the pacman in top left corner
         gameMap.initPlayer(player);
     }
 
     private void initGhosts(){
         ghosts = new LinkedList<>();
-//        double ghostSpeed = (pixelSize == 18) ? 1 : 2.0; //for mom, need to set to .5 or 1
-        double ghostSpeed = (pixelSize == 18) ? 1.5 : 2.5; //for mom, need to set to .5 or 1
+
         for(int i = 0; i < numberOfGhosts; i++){
             Ghost ghost = new Ghost(Map.getGhostStartingPosition(), player, ghostSpeed);
             ghosts.add(ghost);
@@ -196,7 +229,7 @@ public class App extends Application {
 
     //=======================================GAME LIFECYCLE=======================================================
     private void showMainMenu(boolean startMusic){
-        resetGame();
+        resetNewLevel();
         mainMenu = new MainMenu();
         mainStage.setScene(mainMenu.getScene());
         changeScene(mainMenu.getScene(), mainMenu.getPane());
@@ -207,17 +240,20 @@ public class App extends Application {
         }
     }
 
-    private void showEndMenu(){
+    private void showEnd(){
         gameLoop.stop();
-        endMenu = new EndMenu(gameMap.getTime(), win);
         music.stop();
         if(win){
-            changeMusic(winMusic, true);
+            NextLevelMenu nextLevelMenu = new NextLevelMenu();
+            increaseLevel();
+            changeMusic(winMusic, true); //FIXME - add different music here.
+            changeScene(nextLevelMenu.getScene(), nextLevelMenu.getPane());
         }else{
+            gameOverMenu = new GameOverMenu(statistics.getTime(), win); //FIXME need to add score here, in addition to time.
             soundEffects.selectSound(loseMusic);
             soundEffects.play();
+            changeScene(gameOverMenu.getScene(), gameOverMenu.getPane());
         }
-        changeScene(endMenu.getScene(), endMenu.getPane());
     }
 
     private void showOptionsMenu(){
@@ -230,18 +266,25 @@ public class App extends Application {
     }
 
     private void saveUserScore(){
-        scoreSaver = new ScoreSaver(player.getScore(), gameMap.getTime());
+        scoreSaver = new ScoreSaver(player.getScore(), statistics.getTime());
         changeScene(scoreSaver.getScene(), scoreSaver.getPane());
     }
 
     private void startGame(){
-        gameMap = new Map(mapName, pixelSize); //initialize map FIXME - THIS WILL BE DEPENDENT ON THE MAP LEVEL, SO WE SHOULD NOT PASS A PARAMETER HERE.
+        getLevelSettings();
+        initPixelSize();
+        configureMap();
         changeScene(gameMap.getScene(), gameMap.getPane()); //configure stage settings for screen position
         initKeyCommands(gameMap.getScene()); //bind keystroke actions to the main scene window
         initPacMan(); //create the pac-man player.
         initGhosts();
         changeMusic(gameMusic, true);
         bootGame(); //starts the game loop.
+    }
+
+    private void configureMap(){
+        gameMap = new Map(map, pixelSize, levelColor); //FIXME also pass in a color here for the map difficulty.
+//        gameMap.attachStatistics(statistics, fontName);
     }
 
     private void changeMusic(String name, boolean resetPosition){
@@ -298,7 +341,7 @@ public class App extends Application {
             updateGameStats();
             lastUpdateTime.set(timeStamp);
         }else{
-            showEndMenu();
+            showEnd();
         }
         checkIfGameOver();
     }
@@ -374,11 +417,11 @@ public class App extends Application {
     //============================================================================================================
 
     private void updateGameStats(){
-        gameMap.updateScore(player.getScore());
-        gameMap.updateTime();
+        statistics.updateScore(player.getScore());
+        statistics.updateTime();
     }
 
-    public void checkIfGameOver(){
+    private void checkIfGameOver(){
         if(gameMap.getMapFoodLeft() == 0){
             win = true;
             gameOver = true;
@@ -388,7 +431,7 @@ public class App extends Application {
         }
     }
 
-    public void resetGame(){
+    private void resetNewLevel(){
         MapCell.resetFood(); //puts food back to original count.
         gameOver = false;
         playerIsDead = false;
@@ -397,6 +440,17 @@ public class App extends Application {
         vulnerableTimer = 480;
         ghostVulnerable = false;
     }
+
+    private void increaseLevel(){
+
+    }
+
+    private void resetAllLevels(){
+        resetNewLevel();
+        statistics.reset();
+        Ghost.resetTrackingDistance();
+        numberOfGhosts = 4;
+    } //to be called once player loses game, and decides to play again.
     //============================================================================================================
 
     //=======================================MAIN LAUNCHER========================================================
@@ -424,7 +478,7 @@ public class App extends Application {
         switch (identifier){
             case "START":
             case "PLAY AGAIN":
-                resetGame();
+                resetNewLevel();
                 startGame();
                 break;
             case "MAIN MENU":
@@ -567,7 +621,7 @@ public class App extends Application {
         }
 
         private void initButtons() {
-            Font font = new Font(fontName, vbox.getPrefWidth() / 14);
+            Font font = new Font(fontName, vbox.getPrefWidth() / 16);
             double width = vbox.getPrefWidth();
             double height = vbox.getPrefHeight() / 10;
 
@@ -608,7 +662,61 @@ public class App extends Application {
 
     }
 
-    private class EndMenu {
+    private class NextLevelMenu {
+        private final Pane pane = new Pane();
+        private final VBox vBox = new VBox();
+        private final Scene nextLevelScene;
+        private Font font;
+        private MenuButton startButton;
+
+        public NextLevelMenu(){
+            initGrid();
+            initLabels();
+            initButton();
+            nextLevelScene = new Scene(pane);
+            nextLevelScene.getStylesheets().addAll("/styles.css");
+        }
+
+        private void initGrid(){
+            pane.setPrefSize(screenDimensions.getWidth() * .8, screenDimensions.getHeight() *.8);
+            pane.setStyle(backgroundColor);
+            vBox.setAlignment(Pos.TOP_CENTER);
+            vBox.setSpacing(vBox.getPrefWidth() / 6);
+            pane.getChildren().addAll(vBox);
+            font = new Font(fontName, vBox.getPrefWidth() / 16);
+        }
+
+        private void initLabels(){
+            Label level = new Label();
+            Label time = new Label();
+            Label score = new Label();
+            level.setText(statistics.getTime());
+            time.setText(statistics.getTime());
+            score.setText(String.valueOf(statistics.getScore()));
+            level.setFont(font);
+            time.setFont(font);
+            score.setFont(font);
+            vBox.getChildren().addAll(level, time, score);
+        }
+
+        private void initButton(){
+            startButton = new MenuButton("START", font, vBox.getPrefWidth() / 2, vBox.getPrefHeight() / 2);
+            startButton.setOnKeyPressed(enterKeyPressed);
+            startButton.setOnMouseClicked(mouseClicked);
+            vBox.getChildren().add(startButton);
+        }
+
+        public Scene getScene(){
+            return this.nextLevelScene;
+        }
+
+        public Pane getPane(){
+            return this.pane;
+        }
+
+    }
+
+    private class GameOverMenu {
 
         private final Pane pane = new Pane();
 
@@ -628,7 +736,7 @@ public class App extends Application {
         private MenuButton exit;
         private List<MenuButton> buttons = new LinkedList<>();
 
-        public EndMenu(String time, boolean outcome){
+        public GameOverMenu(String time, boolean outcome){
             this.time = time;
             this.win = outcome;
             initGrid();
@@ -703,7 +811,7 @@ public class App extends Application {
         }
 
         private void initButtons(){
-            Font font = new Font(fontName, lowerHBox.getPrefHeight() / 10);
+            Font font = new Font(fontName, lowerHBox.getPrefHeight() / 12);
             double width = lowerHBox.getPrefWidth() / 6;
             double height = lowerHBox.getPrefHeight() / 2;
 
@@ -741,7 +849,7 @@ public class App extends Application {
         }
     }
 
-    public class ScoreSaver{
+    private class ScoreSaver{
         private final List<Score> scores = new LinkedList<>();
         private Pane pane;
         private Scene scene;
@@ -998,7 +1106,7 @@ public class App extends Application {
         }
     }
 
-    public class LeaderBoard{
+    private class LeaderBoard{
 
         private Font font;
         private final LinkedList<String> scoreEntries = new LinkedList<>();

@@ -48,7 +48,7 @@ public class Ghost {
     private final String[] smartDirections = new String[3];
     private String lastMove;
     private boolean lastMoveWasRandom = false;
-
+    private static double trackingDistance = 15;
     private final LinkedList<Node> BODY_PARTS = new LinkedList<>();
 
 
@@ -99,7 +99,7 @@ public class Ghost {
     }
 
     private boolean pacmanIsInRange(){
-        return getDistanceFromPlayer(this.xMid, this.yMid, pacman.getCenterX(), pacman.getCenterY()) < (cellOccupied.getSize() * 5);
+        return getDistanceFromPlayer(this.xMid, this.yMid, pacman.getCenterX(), pacman.getCenterY()) < (cellOccupied.getSize() * trackingDistance);
     }
 
     private double getDistanceFromPlayer(double ghostX, double ghostY, double pacmanX, double pacmanY){
@@ -263,6 +263,14 @@ public class Ghost {
         }
     }
 
+    public static void increaseTrackingDistance(){
+        trackingDistance += .5;
+    }
+
+    public static void resetTrackingDistance(){
+        trackingDistance = 4;
+    }
+
     //===================================================|
 
     //======================================NAVIGATIONAL METHODS============================================
@@ -410,23 +418,6 @@ public class Ghost {
         return xMid == cellOccupied.getCenterX();
     }
 
-    private boolean canMoveRight(){
-        return verticallyCentered() && !cellOccupied.getRightNeighbor().isBorder() && !cellOccupied.getRightNeighbor().isPortal();
-    }
-
-    private boolean canMoveLeft(){
-        return verticallyCentered() && !cellOccupied.getLeftNeighbor().isBorder() && !cellOccupied.getLeftNeighbor().isPortal();
-    }
-
-    private boolean canMoveUp(){
-        return horizontallyCentered() && !cellOccupied.getTopNeighbor().isBorder() && !cellOccupied.getTopNeighbor().isPortal();
-    }
-
-    private boolean canMoveDown(){
-        return horizontallyCentered() && !cellOccupied.getBottomNeighbor().isBorder() && !cellOccupied.getBottomNeighbor().isPortal();
-    }
-
-
     private void updateBounds(){
         xLeft = ghostHead.getCenterX() - ghostHead.getRadiusX() + ghostHead.getLayoutX();
         xRight = ghostHead.getCenterX() + ghostHead.getRadiusX() + ghostHead.getLayoutX();
@@ -448,7 +439,6 @@ public class Ghost {
             setColorVulnerable();
             colorVulnerable = true;
         }
-
     }
 
     public void setNotVulnerable(){
@@ -495,6 +485,7 @@ public class Ghost {
         if(alive){
             if(colorVulnerable){ //switch back to normal
                 setColorAlive();
+                colorVulnerable = false;
             }else{ //switch back to vulnerable
                 setColorVulnerable();
                 colorVulnerable = true;

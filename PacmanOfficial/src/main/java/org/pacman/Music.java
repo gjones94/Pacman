@@ -12,6 +12,7 @@ public class Music{
     private boolean play = false;
     private HashMap<String, Clip> clips = new HashMap<>();
     private Clip clip;
+//    private String[] songs = {"gameMusic","intro", "win", "office", "michael"};
     private String[] songs = {"gameMusic","intense","intro", "lose", "win"};
 
     public Music(){

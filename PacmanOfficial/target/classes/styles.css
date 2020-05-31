@@ -25,3 +25,8 @@
     -fx-text-fill: black;
     -fx-border-color: yellow;
 }
+
+.label{
+    -fx-background-color: black;
+    -fx-text-fill: blueviolet;
+}

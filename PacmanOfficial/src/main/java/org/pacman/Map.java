@@ -1,18 +1,15 @@
 package org.pacman;
 
-import javafx.geometry.Rectangle2D;
+import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
-import javafx.scene.control.Label;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
-import javafx.stage.Screen;
 
-import java.awt.*;
 import java.io.*;
-import java.nio.file.Path;
-import java.util.HashMap;
 import java.util.LinkedList;
 
 public class Map {
@@ -28,7 +25,7 @@ public class Map {
     private double cellSize;
 //    private final double CELL_SIZE = 18;
     private final String BACKGROUND_COLOR = "-fx-background-color: black";
-    private final Color MAP_COLOR = Color.BLUEVIOLET;
+    private Color mapColor = Color.BLUEVIOLET;
 
     private static MapCell ghostStartPosition;
     private static MapCell pacmanStartPosition;
@@ -36,13 +33,17 @@ public class Map {
     //variables for window settings
     private final double[] FRAME_DIMENSIONS = new double[2];
     private final double[] MAP_DIMENSIONS = new double[2];
+    private static HBox statsBar = new HBox();
+    private static VBox leftColumn = new VBox();
+    private static VBox middleColumn = new VBox();
+    private static VBox rightColumn = new VBox();
 
     //objects to attach to the main pain
     private final LinkedList<Node> mapObjects = new LinkedList<>();
 
     //variables for the current map, player, and statistics and game sound.
-    private LinkedList<MapCell> currentMap; //list of cells that are drawn to the map.
-    private LinkedList<MapCell> nonBorderCells; //used to randomly position player
+    private static LinkedList<MapCell> currentMap; //list of cells that are drawn to the map.
+    private static LinkedList<MapCell> nonBorderCells; //used to randomly position player
 
     private static Pane mapPane;
     private Scene mainScene;
@@ -50,14 +51,15 @@ public class Map {
     private Statistics mapStatistics;
 
     //====================================CONSTRUCTOR=================================================
-    public Map(String map, double pixelSize) {
+    public Map(String map, double pixelSize, Color color) {
         this.cellSize = pixelSize;
+        this.mapColor = color;
         initGameLevel();
         initReadMap(map);
         initPane();
+//        initStatisticsGrid();
         initCellLinks();
         initDrawMap();
-        initStatistics();
         initScene();
         initAttachMapObjects();
     }
@@ -71,7 +73,7 @@ public class Map {
     }
 
     private void initReadMap(String map) {//map here will be used eventually once levels are implemented.
-        InputStream inputStream = getClass().getResourceAsStream("/orig.txt");
+        InputStream inputStream = getClass().getResourceAsStream("/" + map + ".txt");
         InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
 
         try(BufferedReader reader = new BufferedReader(inputStreamReader)){
@@ -85,7 +87,7 @@ public class Map {
                     MapCell cell;
                     switch(c){
                         case '#':
-                            cell = new MapCell(columnCount * cellSize, rowCount * cellSize, cellSize, true, false, MAP_COLOR);
+                            cell = new MapCell(columnCount * cellSize, rowCount * cellSize, cellSize, true, false, mapColor);
                             break;
                         case 'P':
                             cell = new MapCell(columnCount * cellSize, rowCount * cellSize, cellSize, false, true, null);
@@ -120,12 +122,27 @@ public class Map {
         }catch(IOException e){
             e.printStackTrace();
         }
-    }//FIXME
+    }
 
     private void initPane() {
         mapPane = new Pane();
         mapPane.setPrefSize(FRAME_DIMENSIONS[0], FRAME_DIMENSIONS[1]);
         mapPane.setStyle(BACKGROUND_COLOR);
+    }
+
+    private void initStatisticsGrid(){
+        statsBar.setPrefSize(mapPane.getPrefWidth(), cellSize * 2);
+        statsBar.setLayoutX(0);
+        statsBar.setLayoutY(0);
+        leftColumn.setPrefSize(statsBar.getPrefWidth() / 3, statsBar.getPrefHeight());
+        middleColumn.setPrefSize(statsBar.getPrefWidth() / 3, statsBar.getPrefHeight());
+        rightColumn.setPrefSize(statsBar.getPrefWidth() / 3, statsBar.getPrefHeight());
+        leftColumn.setAlignment(Pos.CENTER);
+        middleColumn.setAlignment(Pos.CENTER);
+        statsBar.getChildren().add(leftColumn);
+        statsBar.getChildren().add(rightColumn);
+        statsBar.getChildren().add(middleColumn);
+        mapPane.getChildren().add(statsBar);
     }
 
     private void initCellLinks() {
@@ -161,10 +178,14 @@ public class Map {
 
     }
 
-    private void initStatistics() {
-        mapStatistics = new Map.Statistics();
-        mapObjects.add(mapStatistics.getSCORE_LABEL());
-        mapObjects.add(mapStatistics.getTIME_LABEL());
+    public void attachStatistics(Statistics statistics, String fontName) {
+        statistics.setLevelPosition(leftColumn.getLayoutX(), leftColumn.getPrefHeight() / 2);
+        statistics.setScorePosition(middleColumn.getLayoutX(), middleColumn.getPrefHeight() / 2);
+        statistics.setTimePosition(rightColumn.getLayoutX(), rightColumn.getPrefHeight() / 2);
+        statistics.configure(FRAME_DIMENSIONS, fontName, mapColor);
+        leftColumn.getChildren().add(statistics.getLEVEL_LABEL());
+        middleColumn.getChildren().add(statistics.getSCORE_LABEL());
+        rightColumn.getChildren().add(statistics.getTIME_LABEL());
     }
 
     private void initAttachMapObjects(){
@@ -194,88 +215,8 @@ public class Map {
         return MapCell.getMapFoodLeft();
     }
 
-    public String getTime(){
-        return mapStatistics.getTime();
+    public double[] getFRAME_DIMENSIONS(){
+        return FRAME_DIMENSIONS;
     }
     //================================================================================================
-
-    //=================================SETTERS========================================================
-    public void updateTime(){
-        this.mapStatistics.updateTime();
-    }
-
-    public void updateScore(int score){
-        this.mapStatistics.updateScore(score);
-    }
-    //================================================================================================
-
-    //================================INNER CLASSES=======================================================
-    private class Statistics {
-
-        private final Label SCORE_LABEL;
-        private final Label TIME_LABEL;
-        private final double FONT_SIZE;
-        private final Font font;
-
-        private int score;
-        private int secondFractions = 0;
-        private int seconds = 0;
-        private int minutes = 0;
-
-        public Statistics(){
-            this.SCORE_LABEL = new Label();
-            this.TIME_LABEL = new Label();
-            this.FONT_SIZE = FRAME_DIMENSIONS[0] / 30;
-            font = new Font("Rainy Days", FONT_SIZE);
-            setScorePosition(FRAME_DIMENSIONS[0] / 8, 0);
-            setTimePosition(FRAME_DIMENSIONS[0] * 6 / 11, 0);
-        }
-
-        public void setScorePosition(double x, double y){
-            this.SCORE_LABEL.setLayoutX(x);
-            this.SCORE_LABEL.setLayoutY(y);
-            this.SCORE_LABEL.setText("SCORE: " + score); //FIXME static variable.
-            this.SCORE_LABEL.setFont(font);
-            this.SCORE_LABEL.setTextFill(MAP_COLOR);
-        }
-
-        public void setTimePosition(double x, double y){
-            this.TIME_LABEL.setLayoutX(x);
-            this.TIME_LABEL.setLayoutY(y);
-            this.TIME_LABEL.setText("TIME: "); //FIXME static variable.
-            this.TIME_LABEL.setFont(font);
-            this.TIME_LABEL.setTextFill(MAP_COLOR);
-        }
-
-        public void updateScore(int score){
-            this.score = score;
-            SCORE_LABEL.setText("SCORE: " + score);
-        }
-
-        public void updateTime(){
-            secondFractions += 1;
-            if(secondFractions >= 60){
-                secondFractions = 0;
-                seconds++;
-            }
-            if(seconds >= 60){
-                minutes++;
-                seconds = 0;
-            }
-            TIME_LABEL.setText(String.format("TIME: %02d:%02d.%02d", minutes, seconds, secondFractions));
-        }
-
-        public String getTime(){
-            return String.format("%02d:%02d.%02d", minutes, seconds, secondFractions);
-        }
-
-        public Label getSCORE_LABEL(){
-            return SCORE_LABEL;
-        }
-
-        public Label getTIME_LABEL(){
-            return TIME_LABEL;
-        }
-
-    }
 }

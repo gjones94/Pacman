@@ -7,15 +7,15 @@ org\pacman\App$LeaderBoard.class
 org\pacman\Map.class
 org\pacman\App$EndMenu.class
 org\pacman\MenuButton.class
-org\pacman\runMusic.class
 org\pacman\App.class
 org\pacman\App$ScoreSaver$Score.class
 org\pacman\Ghost.class
 org\pacman\Map$Statistics.class
 org\pacman\Pacman.class
 org\pacman\App$2.class
-org\pacman\runSound.class
+org\pacman\MusicRunnable.class
 org\pacman\SoundEffects.class
 org\pacman\Music.class
 org\pacman\App$ScoreSaver.class
+org\pacman\SoundRunnable.class
 org\pacman\App$MainMenu.class

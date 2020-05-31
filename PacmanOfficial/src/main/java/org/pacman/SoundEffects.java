@@ -11,7 +11,8 @@ public class SoundEffects {
     private boolean play = false;
     private HashMap<String, Clip> clips = new HashMap<>();
     private Clip clip;
-    private String[] soundEffects = {"untouchable", "lose", "win", "scream"};
+//    private String[] soundEffects = {"untouchable", "win", "scream", "michael"};
+    private String[] soundEffects = {"untouchable", "intense", "lose", "win", "scream", "michael"};
 
     public SoundEffects(){
         try {
@@ -32,9 +33,6 @@ public class SoundEffects {
     }
 
     public synchronized void selectSound(String name){
-//        if(clip.isActive()){
-//            clip.stop();
-//        }
         clip = clips.get(name);
         clip.setFramePosition(0);
     }
