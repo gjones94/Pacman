@@ -28,9 +28,6 @@ public class Pacman extends Arc {
     private double arcLength = 270;// the larger this is, the smaller the mouth opening //based on updateFunction. --> increment / decrement by MOUTH_SPEED
     private double startAngle = ANGLE_RIGHT;
 
-    //variables for statistics
-    private int score = 0;
-
     //reference point for current location
     private MapCell cellOccupied; //for current location
 
@@ -51,7 +48,7 @@ public class Pacman extends Arc {
         updateMapPosition(cell);
         this.distance = speed;
         cellOccupied.removeCellFood(); //initialize the starting cell to already be eaten.
-        score+=10;
+        Statistics.increaseScore(10);
     }
     //===========================================================================================================
 
@@ -308,7 +305,7 @@ public class Pacman extends Arc {
                 invincible = true;
             }
 //            soundEffects.play("munch.wav");
-            score+=10;
+            Statistics.increaseScore(10);
         }
     }
     //====================================================================================================
@@ -348,9 +345,6 @@ public class Pacman extends Arc {
     //====================================================================================================
 
     //================================GETTERS FOR OBJECTS AND STATISTICS==================================
-    public int getScore(){
-        return  score;
-    }
 
     public boolean isInvincible(){
         return invincible;

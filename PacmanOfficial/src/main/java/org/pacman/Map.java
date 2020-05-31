@@ -9,8 +9,11 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 
+import javax.sound.sampled.Line;
 import java.io.*;
 import java.util.LinkedList;
+import java.util.List;
+import java.util.Random;
 
 public class Map {
 
@@ -25,18 +28,18 @@ public class Map {
     private double cellSize;
 //    private final double CELL_SIZE = 18;
     private final String BACKGROUND_COLOR = "-fx-background-color: black";
-    private Color mapColor = Color.BLUEVIOLET;
+    private Color mapColor;
 
-    private static MapCell ghostStartPosition;
+    private static List<MapCell> ghostStartPositions;
     private static MapCell pacmanStartPosition;
 
     //variables for window settings
     private final double[] FRAME_DIMENSIONS = new double[2];
     private final double[] MAP_DIMENSIONS = new double[2];
-    private static HBox statsBar = new HBox();
-    private static VBox leftColumn = new VBox();
-    private static VBox middleColumn = new VBox();
-    private static VBox rightColumn = new VBox();
+    private static HBox statsBar;
+    private static VBox leftColumn;
+    private static VBox middleColumn;
+    private static VBox rightColumn;
 
     //objects to attach to the main pain
     private final LinkedList<Node> mapObjects = new LinkedList<>();
@@ -48,8 +51,6 @@ public class Map {
     private static Pane mapPane;
     private Scene mainScene;
 
-    private Statistics mapStatistics;
-
     //====================================CONSTRUCTOR=================================================
     public Map(String map, double pixelSize, Color color) {
         this.cellSize = pixelSize;
@@ -57,7 +58,7 @@ public class Map {
         initGameLevel();
         initReadMap(map);
         initPane();
-//        initStatisticsGrid();
+        initStatisticsGrid();
         initCellLinks();
         initDrawMap();
         initScene();
@@ -70,6 +71,7 @@ public class Map {
     private void initGameLevel(){
         currentMap = new LinkedList<>();
         nonBorderCells = new LinkedList<>();
+        ghostStartPositions = new LinkedList<>();
     }
 
     private void initReadMap(String map) {//map here will be used eventually once levels are implemented.
@@ -96,7 +98,7 @@ public class Map {
                             cell = new MapCell(columnCount * cellSize, rowCount * cellSize, cellSize, false, false, null);
                             if(c == 'G'){
                                 cell.setGhostStart();
-                                ghostStartPosition = cell;
+                                ghostStartPositions.add(cell);
                             }
                             if(c == 'U'){
                                 cell.setPacmanStart();
@@ -131,17 +133,22 @@ public class Map {
     }
 
     private void initStatisticsGrid(){
+        statsBar = new HBox();
+        leftColumn = new VBox();
+        rightColumn = new VBox();
+        middleColumn = new VBox();
         statsBar.setPrefSize(mapPane.getPrefWidth(), cellSize * 2);
-        statsBar.setLayoutX(0);
-        statsBar.setLayoutY(0);
+        statsBar.setLayoutX(mapPane.getLayoutX() + cellSize / 2);
+        statsBar.setLayoutY(mapPane.getLayoutY() + cellSize / 2);
+        statsBar.setAlignment(Pos.CENTER);
         leftColumn.setPrefSize(statsBar.getPrefWidth() / 3, statsBar.getPrefHeight());
         middleColumn.setPrefSize(statsBar.getPrefWidth() / 3, statsBar.getPrefHeight());
+        middleColumn.setAlignment(Pos.TOP_CENTER);
+        rightColumn.setAlignment(Pos.TOP_CENTER);
         rightColumn.setPrefSize(statsBar.getPrefWidth() / 3, statsBar.getPrefHeight());
-        leftColumn.setAlignment(Pos.CENTER);
-        middleColumn.setAlignment(Pos.CENTER);
         statsBar.getChildren().add(leftColumn);
-        statsBar.getChildren().add(rightColumn);
         statsBar.getChildren().add(middleColumn);
+        statsBar.getChildren().add(rightColumn);
         mapPane.getChildren().add(statsBar);
     }
 
@@ -179,19 +186,15 @@ public class Map {
     }
 
     public void attachStatistics(Statistics statistics, String fontName) {
-        statistics.setLevelPosition(leftColumn.getLayoutX(), leftColumn.getPrefHeight() / 2);
-        statistics.setScorePosition(middleColumn.getLayoutX(), middleColumn.getPrefHeight() / 2);
-        statistics.setTimePosition(rightColumn.getLayoutX(), rightColumn.getPrefHeight() / 2);
         statistics.configure(FRAME_DIMENSIONS, fontName, mapColor);
-        leftColumn.getChildren().add(statistics.getLEVEL_LABEL());
+        leftColumn.getChildren().add(statistics.getTIME_LABEL());
         middleColumn.getChildren().add(statistics.getSCORE_LABEL());
-        rightColumn.getChildren().add(statistics.getTIME_LABEL());
+        rightColumn.getChildren().add(statistics.getLEVEL_LABEL());
     }
 
     private void initAttachMapObjects(){
         mapPane.getChildren().addAll(mapObjects);
     }
-
     //================================================================================================
 
     //=================================GETTERS========================================================
@@ -208,15 +211,11 @@ public class Map {
     }
 
     public static MapCell getGhostStartingPosition(){//FIXME, needs to be based on the map indicator.
-        return ghostStartPosition;
+        return ghostStartPositions.get(new Random().nextInt(ghostStartPositions.size()));
     }
 
     public int getMapFoodLeft(){
         return MapCell.getMapFoodLeft();
-    }
-
-    public double[] getFRAME_DIMENSIONS(){
-        return FRAME_DIMENSIONS;
     }
     //================================================================================================
 }

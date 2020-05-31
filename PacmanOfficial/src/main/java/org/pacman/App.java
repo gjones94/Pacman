@@ -10,6 +10,7 @@ import javafx.geometry.Pos;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
+import javafx.scene.control.Menu;
 import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
@@ -76,7 +77,7 @@ public class App extends Application {
     private List<Ghost> ghosts;
     private double playerSpeed;
     private double ghostSpeed;
-    private int mapLevel = 2; //beginning level.
+    private int mapLevel = 3; //beginning level.
     private boolean gameOver = false;
     private boolean win = false;
     private boolean playerIsDead = false;
@@ -135,38 +136,99 @@ public class App extends Application {
     //============================================================================================================
 
 
+    //=======================================GAME LIFECYCLE=======================================================
+    private void showMainMenu(boolean startMusic){
+        mainMenu = new MainMenu();
+        mainStage.setScene(mainMenu.getScene());
+        changeScene(mainMenu.getScene(), mainMenu.getPane());
+        mainStage.show();
+        mainStage.setOnCloseRequest(closeWindow);
+        if(startMusic){
+            changeMusic(mainMenuMusic, true);
+        }
+    }
+
+    private void showEnd(){
+        gameLoop.stop();
+        music.stop();
+        if(win){
+            winMenu winMenu = new winMenu();
+            changeMusic(winMusic, true); //FIXME - add different music here.
+            changeScene(winMenu.getScene(), winMenu.getPane());
+        }else{
+            gameOverMenu = new GameOverMenu(statistics.getTime(), win); //FIXME need to add score here, in addition to time.
+            soundEffects.selectSound(loseMusic);
+            soundEffects.play();
+            changeScene(gameOverMenu.getScene(), gameOverMenu.getPane());
+        }
+    }
+
+    private void showOptionsMenu(){
+
+    }
+
+    private void showNextLevelMenu(){
+        NextLevelMenu nextLevel = new NextLevelMenu();
+        music.stop();
+        changeScene(nextLevel.getScene(), nextLevel.getPane());
+    }
+
+    private void showLeaderBoard(){
+        leaderBoardMenu = new LeaderBoard();
+        changeScene(leaderBoardMenu.getScene(), leaderBoardMenu.getPane());
+    }
+
+    private void saveUserScore(){
+        scoreSaver = new ScoreSaver(statistics.getScore(), statistics.getTime());
+        changeScene(scoreSaver.getScene(), scoreSaver.getPane());
+    }
+
+    private void startGame(){
+        getLevelSettings();
+        initPixelSize();
+        configureMap();
+        changeScene(gameMap.getScene(), gameMap.getPane()); //configure stage settings for screen position
+        initKeyCommands(gameMap.getScene()); //bind keystroke actions to the main scene window
+        initPacMan(); //create the pac-man player.
+        initGhosts();
+        changeMusic(gameMusic, true);
+        lastUpdateTime = new SimpleLongProperty();
+        gameLoop = new AnimationTimer() {
+            @Override
+            public void handle(long now) {
+                onUpdate(now);
+            }
+        };
+        gameLoop.start();
+    }
+
     //===================================GAME INITIALIZERS=========================================================
     private void getLevelSettings(){
         if(mapLevel == 3){
             map = "difficult";
             levelColor = Color.RED;
-            mapLevel = 1; //reset back to the next iteration of the maps. increase tracking distance. maybe increase ghosts.
-            Ghost.increaseTrackingDistance();
         }else if(mapLevel == 2){
             map = "intermediate";
             levelColor = Color.GREEN;
-            mapLevel++;
         }else{
             levelColor = Color.BLUE;
             map = "easy";
-            mapLevel++;
         }
-
     }
 
     private void initPixelSize(){//FIXME need to adjust speed too!!!
         screenDimensions = Screen.getPrimary().getVisualBounds();
-        if(map.equals("difficult")) {
-            if (screenDimensions.getHeight() < 1080) {
-                pixelSize = 18;
-                playerSpeed = 2.25;
-                ghostSpeed = 1.125;
-            } else {
-                pixelSize = 30;
-                playerSpeed = 3.75;
-                ghostSpeed = 1.875;
-            }
-        }else {
+//        if(map.equals("difficult")) {
+//            if (screenDimensions.getHeight() < 1080) {
+//                pixelSize = 18;
+//                playerSpeed = 2.25;
+//                ghostSpeed = 1.125;
+//            } else {
+//                pixelSize = 30;
+//                playerSpeed = 3.75;
+//                ghostSpeed = 1.875;
+//            }
+//        }else {
             if (screenDimensions.getHeight() < 1080) {
                 pixelSize = 36;
                 playerSpeed = 3;
@@ -176,7 +238,13 @@ public class App extends Application {
                 playerSpeed = 4;
                 ghostSpeed = 3;
             }
-        }
+//        }
+    }
+
+
+    private void configureMap(){
+        gameMap = new Map(map, pixelSize, levelColor); //FIXME also pass in a color here for the map difficulty.
+        gameMap.attachStatistics(statistics, fontName);
     }
 
     private void changeScene(Scene scene, Pane pane){
@@ -212,7 +280,7 @@ public class App extends Application {
     }
 
     private void initPacMan(){//FIXME feed pixel size to me
-        player = new Pacman(gameMap.getPacManStartingPosition(), playerSpeed); //sets the pacman in top left corner
+        player = new Pacman(Map.getPacManStartingPosition(), playerSpeed); //sets the pacman in top left corner
         gameMap.initPlayer(player);
     }
 
@@ -227,65 +295,43 @@ public class App extends Application {
     }
     //============================================================================================================
 
-    //=======================================GAME LIFECYCLE=======================================================
-    private void showMainMenu(boolean startMusic){
-        resetNewLevel();
-        mainMenu = new MainMenu();
-        mainStage.setScene(mainMenu.getScene());
-        changeScene(mainMenu.getScene(), mainMenu.getPane());
-        mainStage.show();
-        mainStage.setOnCloseRequest(closeWindow);
-        if(startMusic){
-            changeMusic(mainMenuMusic, true);
+    private void checkIfGameOver(){
+        if(gameMap.getMapFoodLeft() == 0){
+            win = true;
+            gameOver = true;
+        }else if(playerIsDead){
+            win =  false;
+            gameOver = true;
         }
     }
 
-    private void showEnd(){
-        gameLoop.stop();
-        music.stop();
-        if(win){
-            NextLevelMenu nextLevelMenu = new NextLevelMenu();
-            increaseLevel();
-            changeMusic(winMusic, true); //FIXME - add different music here.
-            changeScene(nextLevelMenu.getScene(), nextLevelMenu.getPane());
-        }else{
-            gameOverMenu = new GameOverMenu(statistics.getTime(), win); //FIXME need to add score here, in addition to time.
-            soundEffects.selectSound(loseMusic);
-            soundEffects.play();
-            changeScene(gameOverMenu.getScene(), gameOverMenu.getPane());
+    private void resetGameVariables(){
+        gameOver = false;
+        playerIsDead = false;
+        win = false;
+        paused = false;
+        vulnerableTimer = 480;
+        ghostVulnerable = false;
+    }
+
+    private void increaseLevel(){
+        mapLevel++;
+        if(mapLevel == 4){
+            mapLevel = 1;
         }
+        resetGameVariables();
+        Ghost.increaseTrackingDistance();
+        statistics.updateLevel();
     }
 
-    private void showOptionsMenu(){
-
+    private void resetAllLevels(){
+        resetGameVariables();
+        MapCell.resetFood();
+        statistics.reset();
+        Ghost.resetTrackingDistance();
+        numberOfGhosts = 4;
     }
 
-    private void showLeaderBoard(){
-        leaderBoardMenu = new LeaderBoard();
-        changeScene(leaderBoardMenu.getScene(), leaderBoardMenu.getPane());
-    }
-
-    private void saveUserScore(){
-        scoreSaver = new ScoreSaver(player.getScore(), statistics.getTime());
-        changeScene(scoreSaver.getScene(), scoreSaver.getPane());
-    }
-
-    private void startGame(){
-        getLevelSettings();
-        initPixelSize();
-        configureMap();
-        changeScene(gameMap.getScene(), gameMap.getPane()); //configure stage settings for screen position
-        initKeyCommands(gameMap.getScene()); //bind keystroke actions to the main scene window
-        initPacMan(); //create the pac-man player.
-        initGhosts();
-        changeMusic(gameMusic, true);
-        bootGame(); //starts the game loop.
-    }
-
-    private void configureMap(){
-        gameMap = new Map(map, pixelSize, levelColor); //FIXME also pass in a color here for the map difficulty.
-//        gameMap.attachStatistics(statistics, fontName);
-    }
 
     private void changeMusic(String name, boolean resetPosition){
         if(music.isPlaying()){
@@ -293,17 +339,6 @@ public class App extends Application {
         }
         music.selectSong(name, resetPosition);
         music.play();
-    }
-
-    private void bootGame(){
-        lastUpdateTime = new SimpleLongProperty();
-        gameLoop = new AnimationTimer() {
-            @Override
-            public void handle(long now) {
-                    onUpdate(now);
-            }
-        };
-        gameLoop.start();
     }
 
     private void pauseGame(){
@@ -393,6 +428,11 @@ public class App extends Application {
         }
     }
 
+    private void updateGameStats(){
+        statistics.updateScore();
+        statistics.updateTime();
+    }
+
     private void initVulnerability(){
         if(ghostVulnerable){
             changeMusic(intenseMusic, false);
@@ -416,49 +456,6 @@ public class App extends Application {
     }
     //============================================================================================================
 
-    private void updateGameStats(){
-        statistics.updateScore(player.getScore());
-        statistics.updateTime();
-    }
-
-    private void checkIfGameOver(){
-        if(gameMap.getMapFoodLeft() == 0){
-            win = true;
-            gameOver = true;
-        }else if(playerIsDead){
-            win =  false;
-            gameOver = true;
-        }
-    }
-
-    private void resetNewLevel(){
-        MapCell.resetFood(); //puts food back to original count.
-        gameOver = false;
-        playerIsDead = false;
-        win = false;
-        paused = false;
-        vulnerableTimer = 480;
-        ghostVulnerable = false;
-    }
-
-    private void increaseLevel(){
-
-    }
-
-    private void resetAllLevels(){
-        resetNewLevel();
-        statistics.reset();
-        Ghost.resetTrackingDistance();
-        numberOfGhosts = 4;
-    } //to be called once player loses game, and decides to play again.
-    //============================================================================================================
-
-    //=======================================MAIN LAUNCHER========================================================
-    public static void main(String[] args) {
-        launch();
-    }
-    //============================================================================================================
-
     //======================================CLICK AND KEY EVENTS==================================================
     EventHandler<WindowEvent> closeWindow = windowEvent -> exit(); //kicks off exit method to kill audio threads.
 
@@ -477,8 +474,17 @@ public class App extends Application {
     private void executeButton(String identifier){
         switch (identifier){
             case "START":
+                startGame();
+                break;
             case "PLAY AGAIN":
-                resetNewLevel();
+                resetAllLevels();
+                startGame();
+                break;
+            case "NEXT LEVEL":
+                showNextLevelMenu();
+                break;
+            case "START LEVEL !":
+                increaseLevel();
                 startGame();
                 break;
             case "MAIN MENU":
@@ -662,58 +668,106 @@ public class App extends Application {
 
     }
 
-    private class NextLevelMenu {
+    private class winMenu {
         private final Pane pane = new Pane();
-        private final VBox vBox = new VBox();
-        private final Scene nextLevelScene;
+        private final HBox upperHBox = new HBox();
+        private final HBox lowerHBox = new HBox();
+        private final VBox upperVBox  = new VBox();
+        private final Scene winScene;
         private Font font;
         private MenuButton startButton;
 
-        public NextLevelMenu(){
+        public winMenu(){
             initGrid();
             initLabels();
             initButton();
-            nextLevelScene = new Scene(pane);
-            nextLevelScene.getStylesheets().addAll("/styles.css");
+            winScene = new Scene(pane);
+            winScene.getStylesheets().addAll("/styles.css");
         }
 
         private void initGrid(){
             pane.setPrefSize(screenDimensions.getWidth() * .8, screenDimensions.getHeight() *.8);
             pane.setStyle(backgroundColor);
-            vBox.setAlignment(Pos.TOP_CENTER);
-            vBox.setSpacing(vBox.getPrefWidth() / 6);
-            pane.getChildren().addAll(vBox);
-            font = new Font(fontName, vBox.getPrefWidth() / 16);
+
+            upperHBox.setAlignment(Pos.CENTER);
+            upperHBox.setPrefSize(pane.getPrefWidth(), pane.getPrefHeight() / 2);
+            lowerHBox.setAlignment(Pos.CENTER);
+            lowerHBox.setPrefSize(pane.getPrefWidth(), pane.getPrefHeight() / 2);
+            lowerHBox.setLayoutY(upperHBox.getLayoutY() + upperHBox.getPrefHeight());
+            upperHBox.getChildren().add(upperVBox);
+
+            upperVBox.setPrefSize(upperHBox.getPrefWidth() / 1.5, upperHBox.getPrefHeight());
+
+            pane.getChildren().add(lowerHBox);
+            pane.getChildren().add(upperHBox);
+
+            font = new Font(fontName, lowerHBox.getPrefWidth() / 16);
         }
 
         private void initLabels(){
             Label level = new Label();
             Label time = new Label();
             Label score = new Label();
-            level.setText(statistics.getTime());
-            time.setText(statistics.getTime());
-            score.setText(String.valueOf(statistics.getScore()));
+            level.setText("LEVEL: " + statistics.getLevel());
+            time.setText("TIME: " + statistics.getTime());
+            score.setText("SCORE: " + statistics.getScore());
             level.setFont(font);
             time.setFont(font);
             score.setFont(font);
-            vBox.getChildren().addAll(level, time, score);
+            upperVBox.getChildren().addAll(level, score, time);
         }
 
         private void initButton(){
-            startButton = new MenuButton("START", font, vBox.getPrefWidth() / 2, vBox.getPrefHeight() / 2);
+            startButton = new MenuButton("NEXT LEVEL", font, upperHBox.getPrefWidth() * 3 / 5, lowerHBox.getPrefHeight() / 5);
             startButton.setOnKeyPressed(enterKeyPressed);
             startButton.setOnMouseClicked(mouseClicked);
-            vBox.getChildren().add(startButton);
+            lowerHBox.getChildren().add(startButton);
         }
 
         public Scene getScene(){
-            return this.nextLevelScene;
+            return this.winScene;
         }
 
         public Pane getPane(){
             return this.pane;
         }
+    }
 
+    private class NextLevelMenu {
+        private Pane pane;
+        private Scene scene;
+        private MenuButton go;
+        private Label level;
+
+        public NextLevelMenu(){
+            level = new Label("LEVEL " + (statistics.getLevel() + 1));
+            pane = new Pane();
+
+            pane.setPrefSize(screenDimensions.getWidth() * .8, screenDimensions.getHeight() * .8);
+            pane.setStyle(backgroundColor);
+            level.setFont(new Font(fontName, pane.getPrefWidth() / 15));
+
+            VBox vBox = new VBox();
+            vBox.setPrefSize(pane.getPrefWidth(), pane.getPrefHeight());
+            vBox.setAlignment(Pos.CENTER);
+            vBox.setSpacing(vBox.getPrefWidth() / 10);
+            go = new MenuButton("START LEVEL !", new Font(fontName, vBox.getPrefWidth() / 20), pane.getPrefWidth() / 2, pane.getPrefHeight() / 9);
+            vBox.getChildren().add(level);
+            vBox.getChildren().add(go);
+            pane.getChildren().add(vBox);
+            scene = new Scene(pane);
+            scene.getStylesheets().add("styles.css");
+            go.setOnMouseClicked(mouseClicked);
+            go.setOnKeyPressed(enterKeyPressed);
+        }
+
+        public Pane getPane(){
+            return pane;
+        }
+
+        public Scene getScene(){
+            return scene;
+        }
     }
 
     private class GameOverMenu {
@@ -1308,6 +1362,13 @@ public class App extends Application {
 
     }
 
+    //============================================================================================================
+
+
+    //=======================================MAIN LAUNCHER========================================================
+    public static void main(String[] args) {
+        launch();
+    }
     //============================================================================================================
 
 }
