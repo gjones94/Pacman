@@ -26,12 +26,12 @@ public class Map {
 
     //Map Configurations
     private double cellSize;
-//    private final double CELL_SIZE = 18;
     private final String BACKGROUND_COLOR = "-fx-background-color: black";
     private Color mapColor;
 
     private static List<MapCell> ghostStartPositions;
     private static MapCell pacmanStartPosition;
+    private static int spawnCounter = 0;
 
     //variables for window settings
     private final double[] FRAME_DIMENSIONS = new double[2];
@@ -195,6 +195,10 @@ public class Map {
     private void initAttachMapObjects(){
         mapPane.getChildren().addAll(mapObjects);
     }
+
+    public static void resetSpawnCounter(){
+        spawnCounter = 0;
+    }
     //================================================================================================
 
     //=================================GETTERS========================================================
@@ -211,7 +215,12 @@ public class Map {
     }
 
     public static MapCell getGhostStartingPosition(){//FIXME, needs to be based on the map indicator.
-        return ghostStartPositions.get(new Random().nextInt(ghostStartPositions.size()));
+        MapCell temp = ghostStartPositions.get(spawnCounter);
+        spawnCounter++;
+        if(spawnCounter == ghostStartPositions.size()){
+            spawnCounter = 0;
+        }
+        return temp;
     }
 
     public int getMapFoodLeft(){

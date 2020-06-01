@@ -27,6 +27,7 @@ public class Ghost {
 
     //=====================================NAVIGATIONAL VARIABLES===========================================
     private MapCell cellOccupied;
+    private MapCell startingPosition;
     private final Pacman pacman; //used for checking whereabouts of player.
     private double xLeft;
     private double xRight;
@@ -48,7 +49,7 @@ public class Ghost {
     private final String[] smartDirections = new String[3];
     private String lastMove;
     private boolean lastMoveWasRandom = false;
-    private static double trackingDistance = 15;
+    private static double trackingDistance = 5;
     private final LinkedList<Node> BODY_PARTS = new LinkedList<>();
 
 
@@ -74,6 +75,7 @@ public class Ghost {
     public Ghost(MapCell cell, Pacman pacman, double distance){
         this.pacman = pacman;
         this.cellOccupied = cell;
+        this.startingPosition = cell;
         this.distance = distance;
 
         initGhost();
@@ -264,11 +266,11 @@ public class Ghost {
     }
 
     public static void increaseTrackingDistance(){
-        trackingDistance += .5;
+        trackingDistance +=.5;
     }
 
     public static void resetTrackingDistance(){
-        trackingDistance = 4;
+        trackingDistance = 5;
     }
 
     //===================================================|
@@ -452,7 +454,7 @@ public class Ghost {
     public void kill(){
         alive = false;
         setColorDead();
-        this.cellOccupied = Map.getGhostStartingPosition(); //set cell back at spawn
+        this.cellOccupied = startingPosition; //set cell back at spawn
         for(Node node: BODY_PARTS){
             node.setLayoutX(0);
             node.setLayoutY(0);

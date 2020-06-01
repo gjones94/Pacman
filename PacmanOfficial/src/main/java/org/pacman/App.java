@@ -77,7 +77,7 @@ public class App extends Application {
     private List<Ghost> ghosts;
     private double playerSpeed;
     private double ghostSpeed;
-    private int mapLevel = 3; //beginning level.
+    private int mapLevel = 1; //beginning level.
     private boolean gameOver = false;
     private boolean win = false;
     private boolean playerIsDead = false;
@@ -138,6 +138,7 @@ public class App extends Application {
 
     //=======================================GAME LIFECYCLE=======================================================
     private void showMainMenu(boolean startMusic){
+        resetAllLevels();
         mainMenu = new MainMenu();
         mainStage.setScene(mainMenu.getScene());
         changeScene(mainMenu.getScene(), mainMenu.getPane());
@@ -307,6 +308,7 @@ public class App extends Application {
 
     private void resetGameVariables(){
         gameOver = false;
+        Map.resetSpawnCounter();
         playerIsDead = false;
         win = false;
         paused = false;
@@ -330,6 +332,7 @@ public class App extends Application {
         statistics.reset();
         Ghost.resetTrackingDistance();
         numberOfGhosts = 4;
+        mapLevel = 1;
     }
 
 
@@ -501,9 +504,7 @@ public class App extends Application {
             case "OPTIONS":
                 break;
             case "SAVE SCORE":
-                if(win){
-                    saveUserScore();
-                }
+                saveUserScore();
                 break;
             case "SAVE":
                 scoreSaver.addScoreToList();
@@ -537,15 +538,19 @@ public class App extends Application {
         switch (key) {
             case UP:
             case W:
+            case Y:
                 return player.moveUp();
             case DOWN:
             case S:
+            case H:
                 return player.moveDown();
             case RIGHT:
             case D:
+            case J:
                 return player.moveRight();
             case LEFT:
             case A:
+            case G:
                 return player.moveLeft();
             default:
                 return false;
@@ -1154,7 +1159,13 @@ public class App extends Application {
 
             @Override
             public int compareTo(Score o) {
-                return this.time.compareTo(o.time);
+                if(this.score == o.score){
+                    return this.time.compareTo(o.time);
+                }else if(this.score < o.score){
+                    return 1;
+                }else{
+                    return -1;
+                }
             }
 
         }
