@@ -428,6 +428,17 @@ public class Ghost {
         xMid = (xLeft + xRight) / 2;
         yMid = (yUp + yDown) / 2;
     }
+
+    public void resetPosition(){
+        this.cellOccupied = startingPosition; //set cell back at spawn
+        for(Node node: BODY_PARTS){
+            node.setLayoutX(0);
+            node.setLayoutY(0);
+            node.setTranslateY(0);
+            node.setTranslateY(0);
+        }
+        updateBounds();
+    }
     //==========================================================================================================
 
     //=========================================VULNERABILITY MODE METHODS=======================================
@@ -454,14 +465,7 @@ public class Ghost {
     public void kill(){
         alive = false;
         setColorDead();
-        this.cellOccupied = startingPosition; //set cell back at spawn
-        for(Node node: BODY_PARTS){
-            node.setLayoutX(0);
-            node.setLayoutY(0);
-            node.setTranslateY(0);
-            node.setTranslateY(0);
-        }
-        updateBounds();
+        resetPosition();
     }
 
     public boolean tryRespawn(){
@@ -704,6 +708,13 @@ public class Ghost {
 
     public LinkedList<Node> getBody(){
         return BODY_PARTS;
+    }
+
+    public double getX(){
+        return xLeft;
+    }
+    public double getY(){
+        return yMid;
     }
 //==============================================================================================================
 }

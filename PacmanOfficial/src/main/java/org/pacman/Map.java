@@ -7,13 +7,10 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
-import javafx.scene.text.Font;
 
-import javax.sound.sampled.Line;
 import java.io.*;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Random;
 
 public class Map {
 
@@ -38,8 +35,9 @@ public class Map {
     private final double[] MAP_DIMENSIONS = new double[2];
     private static HBox statsBar;
     private static VBox leftColumn;
-    private static VBox middleColumn;
-    private static VBox rightColumn;
+    private static VBox leftMiddleColumn;
+    private static VBox rightMiddleColumn;
+    private static HBox rightColumn;
 
     //objects to attach to the main pain
     private final LinkedList<Node> mapObjects = new LinkedList<>();
@@ -80,7 +78,7 @@ public class Map {
 
         try(BufferedReader reader = new BufferedReader(inputStreamReader)){
             String input = "";
-            int rowCount = 2; //start at 1 to allow for status bar.
+            int rowCount = 1; //start at 1 to allow for status bar.
             int columnCount = 0;
             char[] mapElements = null;
             while ((input = reader.readLine()) != null) {
@@ -132,23 +130,34 @@ public class Map {
         mapPane.setStyle(BACKGROUND_COLOR);
     }
 
+    
     private void initStatisticsGrid(){
         statsBar = new HBox();
         leftColumn = new VBox();
-        rightColumn = new VBox();
-        middleColumn = new VBox();
-        statsBar.setPrefSize(mapPane.getPrefWidth(), cellSize * 2);
+        leftMiddleColumn = new VBox();
+        rightMiddleColumn = new VBox();
+        rightColumn = new HBox();
+        statsBar.setPrefSize(mapPane.getPrefWidth(), cellSize);
         statsBar.setLayoutX(mapPane.getLayoutX() + cellSize / 2);
-        statsBar.setLayoutY(mapPane.getLayoutY() + cellSize / 2);
+//        statsBar.setLayoutX(0);
+        statsBar.setLayoutY(mapPane.getLayoutY());
         statsBar.setAlignment(Pos.CENTER);
-        leftColumn.setPrefSize(statsBar.getPrefWidth() / 3, statsBar.getPrefHeight());
-        middleColumn.setPrefSize(statsBar.getPrefWidth() / 3, statsBar.getPrefHeight());
-        middleColumn.setAlignment(Pos.TOP_CENTER);
-        rightColumn.setAlignment(Pos.TOP_CENTER);
-        rightColumn.setPrefSize(statsBar.getPrefWidth() / 3, statsBar.getPrefHeight());
+
+        leftColumn.setPrefSize(statsBar.getPrefWidth() / 4, statsBar.getPrefHeight());
+        leftMiddleColumn.setPrefSize(statsBar.getPrefWidth() / 4, statsBar.getPrefHeight());
+        rightMiddleColumn.setPrefSize(statsBar.getPrefWidth() / 4, statsBar.getPrefHeight());
+        rightColumn.setPrefSize(statsBar.getPrefWidth() / 4, statsBar.getPrefHeight());
+
+        leftMiddleColumn.setAlignment(Pos.TOP_CENTER);
+        rightMiddleColumn.setAlignment(Pos.TOP_CENTER);
+        rightColumn.setAlignment(Pos.CENTER);
+        rightColumn.setSpacing(rightColumn.getPrefWidth() / 9);
+
         statsBar.getChildren().add(leftColumn);
-        statsBar.getChildren().add(middleColumn);
+        statsBar.getChildren().add(leftMiddleColumn);
+        statsBar.getChildren().add(rightMiddleColumn);
         statsBar.getChildren().add(rightColumn);
+
         mapPane.getChildren().add(statsBar);
     }
 
@@ -188,8 +197,9 @@ public class Map {
     public void attachStatistics(Statistics statistics, String fontName) {
         statistics.configure(FRAME_DIMENSIONS, fontName, mapColor);
         leftColumn.getChildren().add(statistics.getTIME_LABEL());
-        middleColumn.getChildren().add(statistics.getSCORE_LABEL());
-        rightColumn.getChildren().add(statistics.getLEVEL_LABEL());
+        leftMiddleColumn.getChildren().add(statistics.getSCORE_LABEL());
+        rightMiddleColumn.getChildren().add(statistics.getLEVEL_LABEL());
+        rightColumn.getChildren().addAll(statistics.getLifeObjects());
     }
 
     private void initAttachMapObjects(){

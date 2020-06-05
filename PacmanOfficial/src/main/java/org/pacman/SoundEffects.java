@@ -12,7 +12,7 @@ public class SoundEffects {
     private HashMap<String, Clip> clips = new HashMap<>();
     private Clip clip;
 //    private String[] soundEffects = {"untouchable", "win", "scream", "michael"};
-    private String[] soundEffects = {"untouchable", "intense", "lose", "win", "scream", "michael"};
+    private String[] soundEffects = {"siren", "untouchable", "intense", "lose", "win", "scream", "michael"};
 
     public SoundEffects(){
         try {

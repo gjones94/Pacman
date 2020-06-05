@@ -10,7 +10,6 @@ import javafx.geometry.Pos;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
-import javafx.scene.control.Menu;
 import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
@@ -23,6 +22,7 @@ import javafx.scene.shape.Arc;
 import javafx.scene.shape.ArcType;
 import javafx.scene.shape.Circle;
 import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
@@ -84,6 +84,9 @@ public class App extends Application {
     private boolean ghostVulnerable = false;
     private int vulnerableTimer = 480;
     private boolean timerWarning = false;
+    private int pauseTimer = 0;
+    private static Text ghostScore;
+    private Ghost tempGhost;
 
 
     private static boolean paused = false;
@@ -157,9 +160,7 @@ public class App extends Application {
             changeMusic(winMusic, true); //FIXME - add different music here.
             changeScene(winMenu.getScene(), winMenu.getPane());
         }else{
-            gameOverMenu = new GameOverMenu(statistics.getTime(), win); //FIXME need to add score here, in addition to time.
-            soundEffects.selectSound(loseMusic);
-            soundEffects.play();
+            gameOverMenu = new GameOverMenu(statistics.getTime()); //FIXME need to add score here, in addition to time.
             changeScene(gameOverMenu.getScene(), gameOverMenu.getPane());
         }
     }
@@ -192,6 +193,7 @@ public class App extends Application {
         initKeyCommands(gameMap.getScene()); //bind keystroke actions to the main scene window
         initPacMan(); //create the pac-man player.
         initGhosts();
+        initGhostScore();
         changeMusic(gameMusic, true);
         lastUpdateTime = new SimpleLongProperty();
         gameLoop = new AnimationTimer() {
@@ -241,7 +243,6 @@ public class App extends Application {
             }
 //        }
     }
-
 
     private void configureMap(){
         gameMap = new Map(map, pixelSize, levelColor); //FIXME also pass in a color here for the map difficulty.
@@ -294,6 +295,12 @@ public class App extends Application {
             gameMap.initGhost(ghost);
         }
     }
+
+    private void initGhostScore(){
+        ghostScore = new Text("100");
+        ghostScore.setFill(Color.BLUE);
+        ghostScore.setFont(Font.font("Arial", FontWeight.BOLD, pixelSize / 1.5));
+    }
     //============================================================================================================
 
     private void checkIfGameOver(){
@@ -301,8 +308,13 @@ public class App extends Application {
             win = true;
             gameOver = true;
         }else if(playerIsDead){
-            win =  false;
-            gameOver = true;
+            if(statistics.getLives() == 0){
+                win =  false;
+                gameOver = true;
+            }else{
+                statistics.decreaseLives();
+            }
+            pauseTimer = 120;
         }
     }
 
@@ -316,6 +328,16 @@ public class App extends Application {
         ghostVulnerable = false;
     }
 
+    private void resetPlayers(){
+        for(Ghost ghost: ghosts){
+            ghost.resetPosition();
+        }
+        gameMap.getPane().getChildren().addAll(tempGhost.getBody());
+        player.resetPosition();
+        player.restore();
+        music.play();
+    }
+
     private void increaseLevel(){
         mapLevel++;
         if(mapLevel == 4){
@@ -324,6 +346,7 @@ public class App extends Application {
         resetGameVariables();
         Ghost.increaseTrackingDistance();
         statistics.updateLevel();
+        statistics.increaseLives();
     }
 
     private void resetAllLevels(){
@@ -334,7 +357,6 @@ public class App extends Application {
         numberOfGhosts = 4;
         mapLevel = 1;
     }
-
 
     private void changeMusic(String name, boolean resetPosition){
         if(music.isPlaying()){
@@ -373,15 +395,31 @@ public class App extends Application {
 
     //=======================================GAME UPDATE==========================================================
     public void onUpdate(long timeStamp){
-        if(!gameOver){
-            updatePlayer(timeStamp);
-            updateGhosts();
-            updateGameStats();
-            lastUpdateTime.set(timeStamp);
+        if(pauseTimer == 0){
+            if(!gameOver){
+                updatePlayer(timeStamp);
+                updateGhosts();
+                updateGameStats();
+                lastUpdateTime.set(timeStamp);
+                checkIfGameOver();
+            }else{
+                showEnd();
+            }
         }else{
-            showEnd();
+            pauseTimer --;
+            if(pauseTimer == 0 && ghostVulnerable){
+                gameMap.getPane().getChildren().remove(ghostScore);
+                player.setVisible();
+            }else if(pauseTimer != 0 && playerIsDead){
+                player.die();
+                gameMap.getPane().getChildren().removeAll(tempGhost.getBody());
+            }else if(pauseTimer == 0 && !gameOver){
+                resetGameVariables();
+                resetPlayers();
+            }else{
+                tempGhost = null;
+            }
         }
-        checkIfGameOver();
     }
 
     public void updatePlayer(double elapsedTime){
@@ -419,11 +457,23 @@ public class App extends Application {
             }
             if(ghost.isAlive() && ghost.collidedWithPlayer()){
                 if(ghost.isVulnerable()){
+                    ghostScore.setX(ghost.getX());
+                    ghostScore.setY(ghost.getY());
+                    if(!gameMap.getPane().getChildren().contains(ghostScore)){
+                        gameMap.getPane().getChildren().add(ghostScore);
+                    }
+                    player.setInvisible();
                     ghost.kill();
-                    soundEffects.selectSound("scream");
+                    soundEffects.selectSound("siren");
                     soundEffects.play();
+                    pauseTimer = 30;
                 }
-                else{
+                else{ //player loses a life.
+                    keyStack.clear();
+                    music.stop();
+                    soundEffects.selectSound("lose");
+                    soundEffects.play();
+                    tempGhost = ghost;
                     playerIsDead = true;
                     break;
                 }
@@ -491,11 +541,7 @@ public class App extends Application {
                 startGame();
                 break;
             case "MAIN MENU":
-                if(gameOver){
-                    showMainMenu(true);
-                }else{
-                    showMainMenu(false);
-                }
+                showMainMenu(false);
                 break;
             case "LEADER BOARD":
             case "CANCEL":
@@ -786,8 +832,6 @@ public class App extends Application {
         private final VBox lowerVBox = new VBox();
 
         private Scene endScene;
-        private final String time;
-        private final boolean win;
 
         private MenuButton returnToMain;
         private MenuButton saveScore;
@@ -795,9 +839,7 @@ public class App extends Application {
         private MenuButton exit;
         private List<MenuButton> buttons = new LinkedList<>();
 
-        public GameOverMenu(String time, boolean outcome){
-            this.time = time;
-            this.win = outcome;
+        public GameOverMenu(String time){
             initGrid();
             initLogo();
             initEndGameText();
@@ -849,24 +891,47 @@ public class App extends Application {
 
         private void initEndGameText(){
             double fontSize = pane.getPrefHeight() / 9;
-            String outcome = (win) ? "YOU WIN !!!!" : "YOU LOSE !!!";
+            int oldHighScore;
+
+            Text score = new Text("SCORE - " + statistics.getScore());
             Font font = new Font(fontName, fontSize);
             Color color = Color.YELLOW;
 
-            Text outcomeStatus = new Text(outcome);
-            outcomeStatus.setFill(color);
-            outcomeStatus.setFont(font);
+
+            score.setFill(color);
+            score.setFont(font);
 
 
-            Text officialTime = new Text(time);
+            Text officialTime = new Text("TIME - " + statistics.getTime());
             officialTime.setFont(font);
             officialTime.setFill(color);
 
-            Text gameOver = new Text("GAME OVER");
+            //see if player's score is the new high score.
+            oldHighScore = readHighestScore();
+            String outcome = (statistics.getScore() > oldHighScore) ? "NEW HIGH SCORE!" : "GAME OVER";
+            Text gameOver = new Text(outcome);
+
+
             gameOver.setFont(font);
             gameOver.setFill(color);
 
-            upperVBox.getChildren().addAll(gameOver, outcomeStatus, officialTime); //NOTE, THIS ALSO DETERMINES THE ORDER OF THE BUTTON ARRANGEMENT
+            upperVBox.getChildren().addAll(gameOver, score, officialTime); //NOTE, THIS ALSO DETERMINES THE ORDER OF THE BUTTON ARRANGEMENT
+        }
+
+        private int readHighestScore(){
+                //read from external file
+                try(FileInputStream fis = new FileInputStream(path.toString())){
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(fis));
+                    String readData;
+                    readData = reader.readLine();
+                    String[] strArray = readData.split(",");
+                    return Integer.parseInt(strArray[1]);
+
+                }catch(IOException e){
+
+                }
+
+                return 0;
         }
 
         private void initButtons(){

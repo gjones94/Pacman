@@ -4,6 +4,8 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Arc;
 import javafx.scene.shape.ArcType;
 
+import javax.swing.*;
+
 public class Pacman extends Arc {
 
 
@@ -22,6 +24,7 @@ public class Pacman extends Arc {
     private double distance;
 
     private final double OFFSET_ZERO; //COMPENSATES FOR THE FRAME IN THE TOP ROW. should be equal to the cell size (or radius * 2)
+    private MapCell startingPosition;
 
     //state variables for animation changes
     private boolean closing = true;
@@ -45,6 +48,7 @@ public class Pacman extends Arc {
 
     public Pacman(MapCell cell, double speed){
         this(cell.getCenterX(), cell.getCenterY(), cell.getSize() / 2);
+        this.startingPosition = cell;
         updateMapPosition(cell);
         this.distance = speed;
         cellOccupied.removeCellFood(); //initialize the starting cell to already be eaten.
@@ -279,6 +283,12 @@ public class Pacman extends Arc {
         this.cellOccupied = cell;
 
     }
+
+    public void resetPosition(){
+        updateMapPosition(startingPosition);
+        this.setCenterX(startingPosition.getCenterX());
+        this.setCenterY(startingPosition.getCenterY());
+    }
     //===========================================================================================================
 
     //========================================EAT FOOD METHODS===================================================
@@ -352,5 +362,33 @@ public class Pacman extends Arc {
 
     public void resetInvicibility(){
         invincible = false;
+    }
+
+    public void setInvisible(){
+        this.setFill(Color.BLACK);
+    }
+
+    public void setVisible(){
+        this.setFill(Color.YELLOW);
+    }
+
+    public void die(){
+
+
+        setStartAngle(startAngle);
+        setLength(-arcLength);
+        if(!(arcLength <=0)){
+            arcLength-=4;
+            startAngle-=2;
+        }
+
+    }
+
+    public void restore(){
+        closing = true;
+        arcLength = MOUTH_OPEN;
+        startAngle = ANGLE_UP;
+        setLength(-arcLength);
+        setStartAngle(startAngle);
     }
 }
