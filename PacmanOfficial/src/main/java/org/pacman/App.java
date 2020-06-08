@@ -207,7 +207,11 @@ public class App extends Application {
 
     //===================================GAME INITIALIZERS=========================================================
     private void getLevelSettings(){
-        if(mapLevel == 3){
+
+        if(mapLevel == 4) {
+            map = "mostDifficult";
+            levelColor = Color.DARKTURQUOISE;
+        }else if(mapLevel == 3){
             map = "difficult";
             levelColor = Color.RED;
         }else if(mapLevel == 2){
@@ -340,13 +344,14 @@ public class App extends Application {
 
     private void increaseLevel(){
         mapLevel++;
-        if(mapLevel == 4){
+        if(mapLevel == 5){
             mapLevel = 1;
         }
         resetGameVariables();
         Ghost.increaseTrackingDistance();
         statistics.updateLevel();
         statistics.increaseLives();
+        endVulnerability();
     }
 
     private void resetAllLevels(){
@@ -464,6 +469,7 @@ public class App extends Application {
                     }
                     player.setInvisible();
                     ghost.kill();
+                    Statistics.increaseScore(100);
                     soundEffects.selectSound("siren");
                     soundEffects.play();
                     pauseTimer = 30;
