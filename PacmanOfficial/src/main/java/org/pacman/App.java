@@ -360,7 +360,7 @@ public class App extends Application {
         statistics.reset();
         Ghost.resetTrackingDistance();
         numberOfGhosts = 4;
-        mapLevel = 1;
+        mapLevel = 1; //FIXME NEED TO MODIFY THIS BACK.
     }
 
     private void changeMusic(String name, boolean resetPosition){
