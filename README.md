@@ -1,4 +1,5 @@
-<h1>Freshman year personal project - Pacman</h1>
+<h1>Pacman</h1>
+<h4>A personal project I did during the beginning of Covid</h4>
 
 This was a project I made after my intro to software in Java. It was the spring of 2020 and I had a lot of time on my hands during quarantine.
 
