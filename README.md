@@ -1,5 +1,5 @@
 <h1>Pacman</h1>
-<h4>(A personal project I did during the beginning of Covid)</h4>
+<h4>(A personal project I did after my first semester at UTSA - during the beginning of Covid)</h4>
 
 <hr>
 
