@@ -11,3 +11,5 @@ Some days, I would look back at the previous day's work and have no idea what I 
 
 I will admit, looking back...the code is not pretty. In fact, it's pretty bad in a lot of areas. However, this project was a huge milestone for me after my first semester and the memories, lessons learned, and experience I gained from it was priceless.
 
+**Game Play**
+![giphy](https://github.com/gjones94/Pacman/assets/141204905/84fee407-83cc-40c0-8ecb-62b1d2b7212e)
