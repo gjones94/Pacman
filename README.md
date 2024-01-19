@@ -1,3 +1,5 @@
+<h1>Pacman</h1>
+
 This was a project I made after my intro to software in Java. It was the spring of 2020 and I had a lot of time on my hands during quarantine.
 
 I was inspired because my intro class had us make a bouncing ball on the screen. I figured if I could do that, I had the knowledge I needed to make a 2d pacman game.
