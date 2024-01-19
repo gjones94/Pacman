@@ -1,4 +1,4 @@
-<h1>Pacman</h1>
+<h1>Pacman ( A covid project ) </h1>
 
 This was a project I made after my intro to software in Java. It was the spring of 2020 and I had a lot of time on my hands during quarantine.
 
