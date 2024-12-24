@@ -3,7 +3,7 @@
 
 <hr>
 
-This was a project I made after my intro to software in Java. It was the spring of 2020 and I had a lot of time on my hands during quarantine.
+This was a project I made after my introduction to software class which focused on Java. It was the spring of 2020 and I had a lot of time on my hands during quarantine.
 
 I was inspired because my intro class had us make a bouncing ball on the screen. I figured if I could do that, I had the knowledge I needed to make a 2d pacman game.
 I created most of the functionality entirely from scratch (Maps, animations, collision detection, and the artificial intelligence for the ghost chasing). I used the javafx framework for basic graphics and sound.
