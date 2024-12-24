@@ -1,5 +1,5 @@
 <h1>Pacman</h1>
-<h4>(A fun personal project I did during the first year of my CS undegrad)</h4>
+<h4>(A fun personal project)</h4>
 
 <hr>
 
